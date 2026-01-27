@@ -1,7 +1,7 @@
 const {Router} = require('express');
 const {createTokenForUser} = require('../service/authentication');
 const User = require('../models/user');
-
+ 
 const router = Router();
 
 // Define user-related routes here
@@ -18,6 +18,7 @@ router.post('/signup',async(req,res)=>{
     // Logic for handling user signup
     const {name,email,password,role} = req.body;
     try {
+         
         await User.create({
             name,email,password,role
         });
@@ -32,8 +33,15 @@ router.post('/signup',async(req,res)=>{
 router.post('/signin', async(req,res)=>{
     const {email,password} = req.body;
     try {
-        const user = await User.findOne({email,password});
+        const user = await User.findOne({email});
         if(!user){
+            return res.render('signin',{
+                error: 'Invalid credentials',
+            });
+        }
+        // Use comparePassword method to verify hashed password
+        const isPasswordCorrect = await user.comparePassword(password);
+        if(!isPasswordCorrect){
             return res.render('signin',{
                 error: 'Invalid credentials',
             });
