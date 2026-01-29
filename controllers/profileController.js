@@ -22,17 +22,33 @@ async function getMyProfile(req, res) {
 
 async function updateMyProfile(req, res) {
     try {
+
+        // Prepare update data
+        const updateData = req.body;
+        
+        // Handle file uploads
+        if (req.files) {
+            if (req.files.resumeUrl) {
+                updateData.resumeUrl = `/uploads/resumes/${req.files.resumeUrl[0].filename}`;
+            }
+            if (req.files.profilePicture) {
+                updateData.profilePicture = `/uploads/images/${req.files.profilePicture[0].filename}`;
+            }
+            if (req.files.companyLogo) {
+                updateData.companyLogo = `/uploads/images/${req.files.companyLogo[0].filename}`;
+            }
+        }
         let profile;
         if (req.user.role === 'student') {
             profile = await StudentProfile.findOneAndUpdate(
                 { userId: req.user._id },
-                req.body,
+                updateData,
                 { new: true, upsert: true } // Create if doesn't exist
             );
         } else if (req.user.role === 'recruiter') {
             profile = await RecruiterProfile.findOneAndUpdate(
                 { userId: req.user._id },
-                req.body,
+                updateData,
                 { new: true, upsert: true }
             );
         } else {

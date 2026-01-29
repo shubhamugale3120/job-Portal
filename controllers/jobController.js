@@ -40,7 +40,11 @@ async function updateJob(req, res) {
             return res.status(404).json({ error: 'Job not found' });
         }
 
-        // Optional: enforce ownership check here if needed (only owner/admin can edit)
+        // OWNERSHIP CHECK - Only owner or admin can edit
+        if (job.postedBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'You can only edit your own jobs' });
+        }
+
         Object.assign(job, req.body);
         await job.save();
         return res.json(job);
@@ -54,6 +58,11 @@ async function deleteJob(req, res) {
         const job = await Job.findById(req.params.id);
         if (!job) {
             return res.status(404).json({ error: 'Job not found' });
+        }
+
+        // OWNERSHIP CHECK - Only owner or admin can delete
+        if (job.postedBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'You can only delete your own jobs' });
         }
         await job.deleteOne();
         return res.json({ success: true });

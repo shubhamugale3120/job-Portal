@@ -7,6 +7,7 @@ const applicationRouter = require('./routes/application');
 const profileRouter = require('./routes/profile');
 const path = require('path');
 const cookieParser = require('cookie-parser');
+const errorHandler = require('./middleware/errorHandler');
 const {checkforAuthenticationCookie} = require('./middleware/authetication')
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -47,9 +48,13 @@ app.use('/user',userRouter);
 app.use('/jobs', jobRouter);
 app.use('/applications', applicationRouter);
 app.use('/profile', profileRouter);
+
+
+app.use(errorHandler);
+
 app.listen(PORT,()=>{
     console.log('Server is running on port', PORT);
-})
+});
 
 
 

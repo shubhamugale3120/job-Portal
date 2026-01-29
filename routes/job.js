@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const { requireRole } = require('../middleware/authorization');
+const { validateJob } = require('../middleware/validation');
 const {
     listJobs,
     getJobById,
@@ -17,10 +18,10 @@ router.get('/', listJobs);
 router.get('/:id', getJobById);
 
 // Recruiter/Admin: create job
-router.post('/', requireRole('recruiter', 'admin'), createJob);
+router.post('/', requireRole('recruiter', 'admin'), validateJob, createJob);
 
 // Recruiter/Admin: update job
-router.patch('/:id', requireRole('recruiter', 'admin'), updateJob);
+router.patch('/:id', requireRole('recruiter', 'admin'), validateJob, updateJob);
 
 // Recruiter/Admin: delete job
 router.delete('/:id', requireRole('recruiter', 'admin'), deleteJob);
