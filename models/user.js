@@ -23,6 +23,25 @@ const studentSchema = new Schema({
         enum:['student', 'admin','recruiter'],
         required:true,
         default:'student',
+    },
+    phone:{
+        type:String,
+    },
+    whatsapp:{
+        type:String,
+    },
+    bio:{
+        type:String,
+    },
+    // Recruiter-specific fields
+    company:{
+        type:String,
+    },
+    website:{
+        type:String,
+    },
+    linkedIn:{
+        type:String,
     }
 },{timestamps:true});
 

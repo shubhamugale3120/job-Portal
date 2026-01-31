@@ -1,10 +1,25 @@
 // middleware/validation.js
 const { body, validationResult } = require('express-validator');
 
+// Middleware to convert skills string to array
+const convertSkillsToArray = (req, res, next) => {
+    if (req.body.skills && typeof req.body.skills === 'string') {
+        req.body.skills = req.body.skills.split(',').map(s => s.trim()).filter(s => s);
+    }
+    next();
+};
+
 // Validation error handler middleware
 const handleValidationErrors = (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+        // For HTML form submissions, redirect back with error
+        if (!req.headers['content-type']?.includes('application/json')) {
+            const errorMessages = errors.array().map(e => e.msg).join(', ');
+            const referrer = req.headers.referer || '/';
+            return res.redirect(referrer + '?error=' + encodeURIComponent(errorMessages));
+        }
+        // For API calls, return JSON
         return res.status(400).json({ 
             error: 'Validation failed',
             details: errors.array().map(e => ({ field: e.param, message: e.msg }))
@@ -15,6 +30,7 @@ const handleValidationErrors = (req, res, next) => {
 
 // Job validation rules
 const validateJob = [
+    convertSkillsToArray, // Convert skills string to array before validation
     body('title').trim().notEmpty().withMessage('Job title is required')
         .isLength({ min: 5, max: 100 }).withMessage('Title must be 5-100 characters'),
     body('description').trim().notEmpty().withMessage('Description is required')
@@ -49,5 +65,6 @@ module.exports = {
     validateJob,
     validateSignup,
     validateProfile,
-    handleValidationErrors
+    handleValidationErrors,
+    convertSkillsToArray
 };

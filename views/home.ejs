@@ -1,15 +1,321 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    
     <%- include('./partials/head') %>
-        <title>Job Portal</title>
+    <title>Job Portal - Find Your Dream Job</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+        }
+
+        .hero-section {
+            padding: 60px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            text-align: center;
+            color: white;
+            margin-bottom: 60px;
+        }
+
+        .hero-section h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .hero-section p {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary-hero {
+            background: white;
+            color: #667eea;
+            padding: 14px 40px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-primary-hero:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .btn-secondary-hero {
+            background: transparent;
+            color: white;
+            padding: 14px 40px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border: 2px solid white;
+            transition: all 0.3s;
+        }
+
+        .btn-secondary-hero:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        .features-section {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+
+        .feature-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .feature-card-image {
+            width: 100%;
+            height: 250px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 100px;
+            color: white;
+        }
+
+        .feature-card-image.card1 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .feature-card-image.card2 {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .feature-card-image.card3 {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .feature-card-image.card4 {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .feature-card-content {
+            padding: 35px;
+            text-align: center;
+        }
+
+        .feature-card-content h3 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .feature-card-content p {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .feature-card a {
+            color: #667eea;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .feature-card a:hover {
+            gap: 12px;
+            color: #764ba2;
+        }
+
+        .stats-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 20px;
+            margin: 60px 0;
+            border-radius: 20px;
+        }
+
+        .stats-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            text-align: center;
+        }
+
+        .stat-item h4 {
+            font-size: 40px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .stat-item p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .hero-section h1 {
+                font-size: 32px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+            }
+
+            .btn-primary-hero, .btn-secondary-hero {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
-
     <%- include('./partials/nav') %>
-     
-    <h1>Welcome to the Job Portal</h1>
-     <%- include('./partials/script') %>
+    
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <h1>Welcome to Job Portal</h1>
+        <p>Your gateway to exciting career opportunities</p>
+        <div class="cta-buttons">
+            <% if (!locals.user) { %>
+                <a href="/jobs/browse" class="btn-primary-hero">Browse Jobs</a>
+                <a href="/user/signup" class="btn-secondary-hero">Get Started</a>
+            <% } else if (locals.user.role === 'student') { %>
+                <a href="/jobs/browse" class="btn-primary-hero">Browse Jobs</a>
+                <a href="/student/my-applications" class="btn-secondary-hero">My Applications</a>
+            <% } else if (locals.user.role === 'recruiter') { %>
+                <a href="/recruiter/post-job" class="btn-primary-hero">Post a Job</a>
+                <a href="/recruiter/dashboard" class="btn-secondary-hero">Dashboard</a>
+            <% } %>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="features-section">
+        <div class="features-grid">
+            <!-- Card 1: Find Your Dream Job -->
+            <div class="feature-card">
+                <div class="feature-card-image card1">
+                    <i class="bi bi-search" style="font-size: 80px;"></i>
+                </div>
+                <div class="feature-card-content">
+                    <h3>Find Your Dream Job</h3>
+                    <p>Explore thousands of opportunities from top companies worldwide. Filter by location, skills, and job type to find the perfect match for your career.</p>
+                    <a href="/jobs/browse">
+                        Explore Jobs <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Card 2: Advance Your Career -->
+            <div class="feature-card">
+                <div class="feature-card-image card2">
+                    <i class="bi bi-graph-up" style="font-size: 80px;"></i>
+                </div>
+                <div class="feature-card-content">
+                    <h3>Advance Your Career</h3>
+                    <p>Take the next step in your professional life. Connect with recruiters, build your profile, and unlock new opportunities for growth and success.</p>
+                    <a href="/profile/view">
+                        View Profile <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Card 3: Smart Job Search -->
+            <div class="feature-card">
+                <div class="feature-card-image card3">
+                    <i class="bi bi-filter" style="font-size: 80px;"></i>
+                </div>
+                <div class="feature-card-content">
+                    <h3>Smart Job Search</h3>
+                    <p>Find exactly what you're looking for with our advanced search and filtering options. Get matched with jobs that align with your skills and aspirations.</p>
+                    <a href="/jobs/browse">
+                        Search Now <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Card 4: Your Future Starts Here -->
+            <div class="feature-card">
+                <div class="feature-card-image card4">
+                    <i class="bi bi-star" style="font-size: 80px;"></i>
+                </div>
+                <div class="feature-card-content">
+                    <h3>Your Future Starts Here</h3>
+                    <p>Discover exciting job opportunities and take control of your career path. Join thousands of professionals who found their dream jobs through our platform.</p>
+                    <a href="/user/signup">
+                        Join Now <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="stats-section">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <h4>500+</h4>
+                <p>Active Jobs</p>
+            </div>
+            <div class="stat-item">
+                <h4>1000+</h4>
+                <p>Job Seekers</p>
+            </div>
+            <div class="stat-item">
+                <h4>100+</h4>
+                <p>Companies</p>
+            </div>
+            <div class="stat-item">
+                <h4>95%</h4>
+                <p>Success Rate</p>
+            </div>
+        </div>
+    </div>
+
+    <%- include('./partials/script') %>
 </body>
 </html>

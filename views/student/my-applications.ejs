@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+    <title>My Applications - Job Portal</title>
+</head>
+<body>
+    <%- include('../partials/nav') %>
+    
+    <div class="container mt-4">
+        <% if (locals.success) { %>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle"></i> <%= locals.success %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <% } %>
+        <% if (locals.error) { %>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-circle"></i> <%= locals.error %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <% } %>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="bi bi-file-earmark-text"></i> My Applications</h1>
+            <a href="/jobs/browse" class="btn btn-primary">
+                <i class="bi bi-search"></i> Browse More Jobs
+            </a>
+        </div>
+
+        <!-- Applications Container -->
+        <div id="applicationsContainer">
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include('../partials/script') %>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadApplications();
+        });
+
+        async function loadApplications() {
+            try {
+                const response = await fetch('/applications/me');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const applications = await response.json();
+
+                if (!Array.isArray(applications) || applications.length === 0) {
+                    document.getElementById('applicationsContainer').innerHTML = `
+                        <div class="alert alert-info" role="alert">
+                            <h4 class="alert-heading">No Applications Yet</h4>
+                            <p>You haven't applied to any jobs. Start browsing and apply to positions that interest you!</p>
+                            <hr>
+                            <a href="/jobs/browse" class="btn btn-primary">
+                                <i class="bi bi-search"></i> Browse Jobs
+                            </a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const applicationsHTML = applications.map(app => `
+                    <div class="card mb-3 border-left-4">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <!-- Job Title and Company -->
+                                    <h5 class="card-title">
+                                        <i class="bi bi-briefcase"></i> ${app.jobId?.title || 'Job Removed'}
+                                    </h5>
+                                    
+                                    <!-- Job Details -->
+                                    <p class="text-muted mb-2">
+                                        <i class="bi bi-geo-alt"></i> ${app.jobId?.location || 'N/A'} | 
+                                        <i class="bi bi-briefcase"></i> ${app.jobId?.jobType || 'N/A'} |
+                                        <strong>Salary:</strong> ${app.jobId?.salary || 'Not specified'}
+                                    </p>
+
+                                    <!-- Job Description (Short) -->
+                                    ${app.jobId?.description ? `
+                                        <p class="mb-3 text-muted">
+                                            ${app.jobId.description.substring(0, 150)}${app.jobId.description.length > 150 ? '...' : ''}
+                                        </p>
+                                    ` : ''}
+
+                                    <!-- Skills Required -->
+                                    ${app.jobId?.skills && app.jobId.skills.length > 0 ? `
+                                        <p class="mb-3">
+                                            <strong>Skills Required:</strong><br>
+                                            ${app.jobId.skills.map(skill => `<span class="badge bg-info me-1">${skill}</span>`).join('')}
+                                        </p>
+                                    ` : ''}
+
+                                    <!-- Application Details -->
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="mb-2">
+                                                <strong>Applied On:</strong><br>
+                                                ${new Date(app.appliedAt).toLocaleDateString('en-IN', { 
+                                                    year: 'numeric', 
+                                                    month: 'long', 
+                                                    day: 'numeric'
+                                                })}
+                                            </p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="mb-2">
+                                                <strong>Status:</strong><br>
+                                                ${getStatusBadge(app.status)}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Resume Link -->
+                                    ${app.resumeUrl ? `
+                                        <p class="mb-2">
+                                            <strong>Your Resume:</strong> 
+                                            <a href="${app.resumeUrl}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-file-earmark-pdf"></i> View Resume
+                                            </a>
+                                        </p>
+                                    ` : ''}
+
+                                    <!-- Cover Letter -->
+                                    ${app.coverLetter ? `
+                                        <div class="alert alert-light p-3">
+                                            <strong>Your Cover Letter:</strong>
+                                            <p class="mb-0 mt-2">${app.coverLetter}</p>
+                                        </div>
+                                    ` : ''}
+                                </div>
+
+                                <div class="col-md-4">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6 class="card-title mb-3">Application Status</h6>
+                                            
+                                            ${getStatusDescription(app.status)}
+
+                                            <hr>
+                                            
+                                            ${app.jobId ? `
+                                                <a href="/jobs/browse" class="btn btn-sm btn-outline-primary w-100 mb-2">
+                                                    <i class="bi bi-search"></i> Browse More
+                                                </a>
+                                            ` : ''}
+                                            
+                                            <p class="text-muted small mt-3">
+                                                Application ID: ${app._id?.substring(0, 8) || 'N/A'}...
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                document.getElementById('applicationsContainer').innerHTML = applicationsHTML;
+
+            } catch (error) {
+                console.error('Error loading applications:', error);
+                document.getElementById('applicationsContainer').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i> 
+                        Failed to load applications. Please try again.
+                    </div>
+                `;
+            }
+        }
+
+        function getStatusBadge(status) {
+            const statusLower = (status || '').toLowerCase();
+            const badges = {
+                'applied': '<span class="badge bg-info">Applied</span>',
+                'reviewed': '<span class="badge bg-warning text-dark">Under Review</span>',
+                'rejected': '<span class="badge bg-danger">Rejected</span>',
+                'hired': '<span class="badge bg-success">Hired</span>',
+                'shortlisted': '<span class="badge bg-success">Shortlisted</span>'
+            };
+            return badges[statusLower] || `<span class="badge bg-secondary">${status}</span>`;
+        }
+
+        function getStatusDescription(status) {
+            const statusLower = (status || '').toLowerCase();
+            const descriptions = {
+                'applied': `
+                    <div class="alert alert-info p-2 mb-0">
+                        <i class="bi bi-hourglass-split"></i> 
+                        <small>Waiting for recruiter review</small>
+                    </div>
+                `,
+                'reviewed': `
+                    <div class="alert alert-warning p-2 mb-0">
+                        <i class="bi bi-eye"></i> 
+                        <small>Recruiter is reviewing your application</small>
+                    </div>
+                `,
+                'rejected': `
+                    <div class="alert alert-danger p-2 mb-0">
+                        <i class="bi bi-x-circle"></i> 
+                        <small>Unfortunately, your application was not selected</small>
+                    </div>
+                `,
+                'hired': `
+                    <div class="alert alert-success p-2 mb-0">
+                        <i class="bi bi-check-circle"></i> 
+                        <small>Congratulations! You've been hired!</small>
+                    </div>
+                `,
+                'shortlisted': `
+                    <div class="alert alert-success p-2 mb-0">
+                        <i class="bi bi-star"></i> 
+                        <small>Great! You've been shortlisted!</small>
+                    </div>
+                `
+            };
+            return descriptions[statusLower] || `<small>${status}</small>`;
+        }
+    </script>
+
+    <style>
+        .border-left-4 {
+            border-left: 4px solid #0d6efd;
+        }
+        .card {
+            transition: box-shadow 0.3s ease;
+        }
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</body>
+</html>

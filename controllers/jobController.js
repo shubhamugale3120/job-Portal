@@ -1,4 +1,53 @@
 const Job = require('../models/job');
+const Application = require('../models/Application');
+
+// Get recruiter's posted jobs (API endpoint for dashboard)
+async function getMyJobs(req, res) {
+    try {
+        const jobs = await Job.find({ postedBy: req.user._id })
+            .select('title description location jobType salary skills status createdAt applicationCount')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        return res.json({
+            success: true,
+            data: jobs
+        });
+    } catch (err) {
+        console.error('Error fetching recruiter jobs:', err);
+        return res.status(500).json({ success: false, error: 'Failed to fetch jobs' });
+    }
+}
+
+// Get applications for recruiter's jobs (API endpoint for dashboard)
+async function getMyApplications(req, res) {
+    try {
+        // Get all jobs posted by this recruiter
+        const jobs = await Job.find({ postedBy: req.user._id }).select('_id');
+        const jobIds = jobs.map(j => j._id);
+
+        // Get applications for those jobs
+        const applications = await Application.find({ jobId: { $in: jobIds } })
+            .populate('studentId', 'name email')
+            .populate('jobId', 'title location')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const normalized = applications.map(app => ({
+            ...app,
+            status: (app.status || '').toLowerCase(),
+            appliedAt: app.appliedAt || app.createdAt,
+        }));
+
+        return res.json({
+            success: true,
+            data: normalized
+        });
+    } catch (err) {
+        console.error('Error fetching applications:', err);
+        return res.status(500).json({ success: false, error: 'Failed to fetch applications' });
+    }
+}
 
 // PAGINATION & SEARCH FUNCTIONALITY
 // Why: Without pagination, loading 5000 jobs crashes the server
@@ -7,10 +56,10 @@ async function listJobs(req, res) {
     try {
         // ====== PAGINATION SETUP ======
         // Page: which page user wants (1, 2, 3...)
-        // Limit: how many jobs per page (default 10)
-        // skip: how many jobs to skip (page 2 = skip 10 jobs)
+        // Limit: how many jobs per page (default 20 for better UX)
+        // skip: how many jobs to skip (page 2 = skip 20 jobs)
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        const limit = Math.min(parseInt(req.query.limit) || 20, 100); // Max 100 to prevent abuse
         const skip = (page - 1) * limit;
 
         // ====== BUILD FILTER OBJECT ======
@@ -56,28 +105,29 @@ async function listJobs(req, res) {
         // 2. Skip the first (page-1)*limit jobs
         // 3. Limit to only 'limit' number of jobs
         // 4. Sort by newest first
+        // 5. Use lean() for faster read-only queries (removes Mongoose overhead)
+        // 6. Select only needed fields to reduce data transfer
+        // 7. Fetch limit+1 to determine hasNextPage without counting all
         const jobs = await Job.find(filter)
             .skip(skip)
-            .limit(limit)
-            .sort({ createdAt: -1 });
+            .limit(limit + 1) // Get one extra to check if more pages exist
+            .sort({ createdAt: -1 })
+            .select('title description location jobType salary skills createdAt status applicationCount')
+            .lean(); // 50% faster for read-only data
 
-        // ====== COUNT TOTAL JOBS ======
-        // Why: Frontend needs to know how many pages exist
-        // Example: 50 jobs total, 10 per page = 5 pages
-        const totalJobs = await Job.countDocuments(filter);
-        const totalPages = Math.ceil(totalJobs / limit);
+        // Check if there are more pages
+        const hasNextPage = jobs.length > limit;
+        const jobsToReturn = hasNextPage ? jobs.slice(0, limit) : jobs;
 
         // ====== RETURN RESPONSE ======
         // Include pagination info so frontend can show "Page 1 of 5"
         return res.json({
             success: true,
-            data: jobs,
+            data: jobsToReturn,
             pagination: {
                 currentPage: page,
                 limit: limit,
-                totalJobs: totalJobs,
-                totalPages: totalPages,
-                hasNextPage: page < totalPages,
+                hasNextPage: hasNextPage,
                 hasPrevPage: page > 1
             }
         });
@@ -88,7 +138,7 @@ async function listJobs(req, res) {
 
 async function getJobById(req, res) {
     try {
-        const job = await Job.findById(req.params.id);
+        const job = await Job.findById(req.params.id).lean();
         if (!job) {
             return res.status(404).json({ error: 'Job not found' });
         }
@@ -154,4 +204,6 @@ module.exports = {
     createJob,
     updateJob,
     deleteJob,
+    getMyJobs,
+    getMyApplications,
 };

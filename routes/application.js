@@ -20,5 +20,6 @@ router.get('/job/:jobId', requireRole('recruiter', 'admin'), getApplicationsForJ
 
 // Recruiter/Admin: update application status
 router.patch('/:id/status', requireRole('recruiter', 'admin'), updateApplicationStatus);
+router.post('/:id/status', requireRole('recruiter', 'admin'), updateApplicationStatus);
 
 module.exports = router;

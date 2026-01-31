@@ -69,6 +69,11 @@ app.get('/student/dashboard', requireRole('student'), (req, res) => {
     res.render('student/dashboard', { user: req.user });
 });
 
+// Student My Applications - requires student role
+app.get('/student/my-applications', requireRole('student'), (req, res) => {
+    res.render('student/my-applications', { user: req.user });
+});
+
 // Recruiter Dashboard - requires recruiter role
 app.get('/recruiter/dashboard', requireRole('recruiter'), (req, res) => {
     res.render('recruiter/dashboard', { user: req.user });
@@ -89,7 +94,58 @@ app.get('/recruiter/view-applicants/:jobId', requireRole('recruiter'), (req, res
     res.render('recruiter/view-applicants', { user: req.user });
 });
 
+// Profile View Routes - requires authentication and fetches fresh data from DB
+app.get('/profile/view', async (req, res) => {
+    if (!req.user) {
+        return res.redirect('/signin?error=' + encodeURIComponent('Please login to view profile'));
+    }
+    
+    try {
+        // Fetch fresh user data from database to show latest updates
+        const User = require('./models/user');
+        const freshUser = await User.findById(req.user._id).select('-password -salt');
+        
+        if (!freshUser) {
+            return res.redirect('/signin?error=' + encodeURIComponent('User not found'));
+        }
+        
+        if (freshUser.role === 'student') {
+            res.render('student/profile', { user: freshUser });
+        } else if (freshUser.role === 'recruiter') {
+            res.render('recruiter/profile', { user: freshUser });
+        } else {
+            res.render('profile', { user: freshUser });
+        }
+    } catch (error) {
+        console.error('Error loading profile view:', error);
+        res.redirect('/?error=' + encodeURIComponent('Failed to load profile'));
+    }
+});
+
+// Profile Edit Routes - requires authentication
+app.get('/profile/edit', (req, res) => {
+    if (!req.user) {
+        return res.redirect('/signin?error=' + encodeURIComponent('Please login to edit profile'));
+    }
+    
+    if (req.user.role === 'student') {
+        res.render('student/edit-profile', { user: req.user });
+    } else if (req.user.role === 'recruiter') {
+        res.render('recruiter/edit-profile', { user: req.user });
+    } else {
+        res.render('edit-profile', { user: req.user });
+    }
+});
+
 // ====== API ROUTES ======
+const {updateProfile} = require('./controllers/userController');
+app.post('/profile/update', (req, res, next) => {
+    if (!req.user) {
+        return res.redirect('/signin?error=' + encodeURIComponent('Please login to update profile'));
+    }
+    next();
+}, updateProfile);
+
 app.use('/user',userRouter);
 app.use('/jobs', jobRouter);
 app.use('/applications', applicationRouter);

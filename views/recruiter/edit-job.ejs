@@ -119,7 +119,7 @@
                 document.getElementById('status').value = job.status;
 
                 // Set form action
-                document.getElementById('editJobForm').action = `/jobs/${jobId}`;
+                document.getElementById('editJobForm').action = `/jobs/${jobId}/update`;
 
                 // Hide spinner, show form
                 document.getElementById('loadingSpinner').classList.add('d-none');
