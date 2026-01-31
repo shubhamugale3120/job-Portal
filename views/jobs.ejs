@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('./partials/head') %>
+    <title>Browse Jobs - Job Portal</title>
+</head>
+<body>
+    <%- include('./partials/nav') %>
+    
+    <div class="container mt-4">
+        <h1 class="mb-4">Browse Jobs</h1>
+
+        <!-- SEARCH & FILTER SECTION -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Search & Filter</h5>
+                <form id="filterForm">
+                    <div class="row g-3">
+                        <!-- Search by Title -->
+                        <div class="col-md-4">
+                            <label for="search" class="form-label">Search Jobs</label>
+                            <input type="text" class="form-control" id="search" placeholder="e.g., React Developer">
+                        </div>
+
+                        <!-- Location Filter -->
+                        <div class="col-md-4">
+                            <label for="location" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="location" placeholder="e.g., Mumbai">
+                        </div>
+
+                        <!-- Skills Filter -->
+                        <div class="col-md-4">
+                            <label for="skills" class="form-label">Skills (comma-separated)</label>
+                            <input type="text" class="form-control" id="skills" placeholder="e.g., React, Node.js">
+                        </div>
+
+                        <!-- Job Type Filter -->
+                        <div class="col-md-4">
+                            <label for="jobType" class="form-label">Job Type</label>
+                            <select class="form-select" id="jobType">
+                                <option value="">All Types</option>
+                                <option value="Full-time">Full-time</option>
+                                <option value="Part-time">Part-time</option>
+                                <option value="Contract">Contract</option>
+                                <option value="Internship">Internship</option>
+                            </select>
+                        </div>
+
+                        <!-- Salary Min Filter -->
+                        <div class="col-md-3">
+                            <label for="salaryMin" class="form-label">Min Salary (LPA)</label>
+                            <input type="number" class="form-control" id="salaryMin" placeholder="5">
+                        </div>
+
+                        <!-- Salary Max Filter -->
+                        <div class="col-md-3">
+                            <label for="salaryMax" class="form-label">Max Salary (LPA)</label>
+                            <input type="number" class="form-control" id="salaryMax" placeholder="15">
+                        </div>
+
+                        <!-- Search Button -->
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">Search</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Jobs Listing Section -->
+        <div id="jobsContainer">
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGINATION SECTION -->
+        <nav aria-label="Job pagination" class="mt-4">
+            <ul class="pagination justify-content-center" id="pagination">
+                <!-- Pagination buttons will be added here by JavaScript -->
+            </ul>
+        </nav>
+    </div>
+
+    <!-- JOB DETAILS MODAL -->
+    <div class="modal fade" id="jobDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="jobTitle"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="jobDetailsContent">
+                    <!-- Job details will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <% if (locals.user && locals.user.role === 'student') { %>
+                        <button type="button" class="btn btn-success" onclick="openApplyModal(currentJobId)">
+                            <i class="bi bi-check-circle"></i> Apply Now
+                        </button>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPLY MODAL -->
+    <div class="modal fade" id="applyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Apply for <span id="applyJobTitle"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="applyForm" action="" method="POST">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="resumeUrl" class="form-label">Resume URL <span class="text-danger">*</span></label>
+                            <input type="url" class="form-control" id="resumeUrl" name="resumeUrl" required
+                                   placeholder="https://example.com/resume.pdf">
+                            <div class="form-text">Provide a link to your resume (PDF or document)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="coverLetter" class="form-label">Cover Letter</label>
+                            <textarea class="form-control" id="coverLetter" name="coverLetter" rows="4"
+                                      placeholder="Tell the recruiter why you're a good fit for this role"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Submit Application
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <%- include('./partials/script') %>
+
+    <script>
+        // Current page state
+        let currentPage = 1;
+        let currentJobId = null;
+        const limit = 10;
+
+        // Load jobs on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadJobs();
+        });
+
+        // Handle filter form submission
+        document.getElementById('filterForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            currentPage = 1; // Reset to page 1 when filtering
+            loadJobs();
+        });
+
+        // Load jobs function with filters
+        async function loadJobs() {
+            try {
+                // Build query parameters
+                const params = new URLSearchParams();
+                params.append('page', currentPage);
+                params.append('limit', limit);
+
+                // Add filters if they have values
+                const search = document.getElementById('search').value.trim();
+                const location = document.getElementById('location').value.trim();
+                const skills = document.getElementById('skills').value.trim();
+                const jobType = document.getElementById('jobType').value;
+                const salaryMin = document.getElementById('salaryMin').value;
+                const salaryMax = document.getElementById('salaryMax').value;
+
+                if (search) params.append('search', search);
+                if (location) params.append('location', location);
+                if (skills) params.append('skills', skills);
+                if (jobType) params.append('jobType', jobType);
+                if (salaryMin) params.append('salaryMin', salaryMin * 100000);
+                if (salaryMax) params.append('salaryMax', salaryMax * 100000);
+
+                // Fetch jobs from API
+                const response = await fetch(`/jobs?${params.toString()}`);
+                const result = await response.json();
+
+                // Display jobs
+                displayJobs(result.data);
+
+                // Display pagination
+                displayPagination(result.pagination);
+
+            } catch (error) {
+                console.error('Error loading jobs:', error);
+                document.getElementById('jobsContainer').innerHTML = `
+                    <div class="alert alert-danger">Failed to load jobs. Please try again.</div>
+                `;
+            }
+        }
+
+        // Display jobs in cards
+        function displayJobs(jobs) {
+            const container = document.getElementById('jobsContainer');
+
+            if (!jobs || jobs.length === 0) {
+                container.innerHTML = `
+                    <div class="alert alert-info">No jobs found. Try different filters.</div>
+                `;
+                return;
+            }
+
+            const jobsHTML = jobs.map(job => `
+                <div class="card mb-3 job-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h5 class="card-title">${job.title}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">
+                                    <i class="bi bi-geo-alt"></i> ${job.location} | 
+                                    <i class="bi bi-briefcase"></i> ${job.jobType} |
+                                    <span class="badge bg-${job.status === 'Active' ? 'success' : 'secondary'}">${job.status}</span>
+                                </h6>
+                                <p class="card-text">${job.description.substring(0, 150)}...</p>
+                                <div class="mb-2">
+                                    ${job.skills.map(skill => `<span class="badge bg-secondary me-1">${skill}</span>`).join('')}
+                                </div>
+                                <p class="mb-2">
+                                    <strong>Salary:</strong> ${job.salary || 'Not specified'}
+                                </p>
+                                <small class="text-muted">Posted on ${new Date(job.createdAt).toLocaleDateString()}</small>
+                            </div>
+                            <div class="btn-group-vertical ms-3">
+                                <button class="btn btn-primary btn-sm" onclick="viewJobDetails('${job._id}')">
+                                    <i class="bi bi-eye"></i> View Details
+                                </button>
+                                <% if (locals.user && locals.user.role === 'student') { %>
+                                    <button class="btn btn-success btn-sm" onclick="openApplyModal('${job._id}')">
+                                        <i class="bi bi-check-circle"></i> Apply
+                                    </button>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = jobsHTML;
+        }
+
+        // View full job details in modal
+        async function viewJobDetails(jobId) {
+            try {
+                const response = await fetch(`/jobs/${jobId}`);
+                const job = await response.json();
+
+                currentJobId = jobId;
+
+                // Populate modal
+                document.getElementById('jobTitle').textContent = job.title;
+                document.getElementById('jobDetailsContent').innerHTML = `
+                    <div class="job-details">
+                        <h6><i class="bi bi-geo-alt"></i> Location: ${job.location}</h6>
+                        <h6><i class="bi bi-briefcase"></i> Job Type: ${job.jobType}</h6>
+                        <h6><i class="bi bi-cash"></i> Salary: ${job.salary || 'Not specified'}</h6>
+                        
+                        <h5 class="mt-3">About this job</h5>
+                        <p>${job.description}</p>
+                        
+                        <h5>Required Skills</h5>
+                        <div class="mb-3">
+                            ${job.skills.map(skill => `<span class="badge bg-primary me-2">${skill}</span>`).join('')}
+                        </div>
+                        
+                        <h5>Job Type</h5>
+                        <p>${job.jobType}</p>
+                        
+                        <small class="text-muted">Applications: ${job.applicationCount || 0} | Posted on ${new Date(job.createdAt).toLocaleDateString()}</small>
+                    </div>
+                `;
+
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('jobDetailsModal'));
+                modal.show();
+
+            } catch (error) {
+                console.error('Error loading job details:', error);
+                alert('Failed to load job details. Please try again.');
+            }
+        }
+
+        // Open apply modal
+        function openApplyModal(jobId) {
+            try {
+                <% if (!locals.user) { %>
+                    alert('Please login to apply for jobs');
+                    window.location.href = '/user/signin';
+                    return;
+                <% } %>
+
+                <% if (locals.user && locals.user.role !== 'student') { %>
+                    alert('Only students can apply for jobs');
+                    return;
+                <% } %>
+
+                // Get job title
+                const jobTitle = document.querySelector(`[onclick*="${jobId}"]`)?.closest('.job-card')?.querySelector('.card-title')?.textContent || 'Job';
+                
+                currentJobId = jobId;
+                document.getElementById('applyJobTitle').textContent = jobTitle;
+                
+                // Set form action
+                document.getElementById('applyForm').action = `/applications/${jobId}/apply`;
+                
+                // Reset form
+                document.getElementById('applyForm').reset();
+                document.getElementById('applyMessage').innerHTML = '';
+
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('applyModal'));
+                modal.show();
+
+            } catch (error) {
+                console.error('Error opening apply modal:', error);
+            }
+        }
+
+        // Display pagination buttons
+        function displayPagination(pagination) {
+            const container = document.getElementById('pagination');
+            
+            if (!pagination || pagination.totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let paginationHTML = '';
+
+            // Previous button
+            paginationHTML += `
+                <li class="page-item ${!pagination.hasPrevPage ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Previous</a>
+                </li>
+            `;
+
+            // Page numbers
+            for (let i = 1; i <= pagination.totalPages; i++) {
+                paginationHTML += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+                    </li>
+                `;
+            }
+
+            // Next button
+            paginationHTML += `
+                <li class="page-item ${!pagination.hasNextPage ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Next</a>
+                </li>
+            `;
+
+            container.innerHTML = paginationHTML;
+        }
+
+        // Change page function
+        function changePage(page) {
+            currentPage = page;
+            loadJobs();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

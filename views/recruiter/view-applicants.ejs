@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+    <title>Job Applicants - Job Portal</title>
+</head>
+<body>
+    <%- include('../partials/nav') %>
+    
+    <div class="container mt-4">
+        <% if (locals.success) { %>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle"></i> <%= locals.success %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <% } %>
+        <% if (locals.error) { %>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-circle"></i> <%= locals.error %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <% } %>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Job Applicants</h1>
+            <a href="/recruiter/dashboard" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+
+        <!-- Job Details Card -->
+        <div class="card mb-4" id="jobDetailsCard">
+            <div class="card-body">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Applicants List -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-people"></i> Applicants 
+                    <span class="badge bg-primary" id="applicantCount">0</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="applicantsContainer">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include('../partials/script') %>
+
+    <script>
+        const jobId = window.location.pathname.split('/').pop();
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadJobDetails();
+            await loadApplicants();
+        });
+
+        async function loadJobDetails() {
+            try {
+                const response = await fetch(`/jobs/${jobId}`);
+                const job = await response.json();
+
+                document.getElementById('jobDetailsCard').innerHTML = `
+                    <div class="card-body">
+                        <h4>${job.title}</h4>
+                        <p class="text-muted mb-2">
+                            <i class="bi bi-geo-alt"></i> ${job.location} | 
+                            <i class="bi bi-briefcase"></i> ${job.jobType} |
+                            <span class="badge bg-${job.status === 'Active' ? 'success' : 'secondary'}">${job.status}</span>
+                        </p>
+                        <p>${job.description}</p>
+                        <div class="mb-2">
+                            <strong>Skills:</strong> 
+                            ${job.skills.map(skill => `<span class="badge bg-secondary me-1">${skill}</span>`).join('')}
+                        </div>
+                        <p><strong>Salary:</strong> ${job.salary || 'Not specified'}</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading job:', error);
+            }
+        }
+
+        async function loadApplicants() {
+            try {
+                const response = await fetch(`/applications/job/${jobId}`);
+                const applications = await response.json();
+
+                document.getElementById('applicantCount').textContent = applications.length;
+
+                if (applications.length === 0) {
+                    document.getElementById('applicantsContainer').innerHTML = `
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> No applications received yet for this job.
+                        </div>
+                    `;
+                    return;
+                }
+
+                const applicantsHTML = applications.map(app => `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h5 class="card-title">
+                                        <i class="bi bi-person"></i> ${app.studentId?.name || 'Unknown'}
+                                    </h5>
+                                    <p class="mb-1">
+                                        <i class="bi bi-envelope"></i> ${app.studentId?.email || 'N/A'}
+                                    </p>
+                                    <p class="mb-2">
+                                        <strong>Applied on:</strong> ${new Date(app.appliedAt).toLocaleDateString()}
+                                    </p>
+                                    <p class="mb-2">
+                                        <strong>Resume:</strong> 
+                                        <a href="${app.resumeUrl}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-file-earmark-pdf"></i> View Resume
+                                        </a>
+                                    </p>
+                                    ${app.coverLetter ? `
+                                        <p class="mb-2">
+                                            <strong>Cover Letter:</strong><br>
+                                            <span class="text-muted">${app.coverLetter}</span>
+                                        </p>
+                                    ` : ''}
+                                    <p class="mb-0">
+                                        <strong>Status:</strong> 
+                                        <span class="badge bg-${getStatusColor(app.status)}">${app.status}</span>
+                                    </p>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <div class="btn-group-vertical" role="group">
+                                        <form action="/applications/${app._id}/status" method="POST" class="mb-1">
+                                            <input type="hidden" name="status" value="REVIEWED">
+                                            <button type="submit" class="btn btn-sm btn-warning w-100" ${app.status === 'REVIEWED' ? 'disabled' : ''}>
+                                                <i class="bi bi-eye"></i> Review
+                                            </button>
+                                        </form>
+                                        <form action="/applications/${app._id}/status" method="POST" class="mb-1">
+                                            <input type="hidden" name="status" value="HIRED">
+                                            <button type="submit" class="btn btn-sm btn-success w-100" ${app.status === 'HIRED' ? 'disabled' : ''}>
+                                                <i class="bi bi-check-circle"></i> Hire
+                                            </button>
+                                        </form>
+                                        <form action="/applications/${app._id}/status" method="POST">
+                                            <input type="hidden" name="status" value="REJECTED">
+                                            <button type="submit" class="btn btn-sm btn-danger w-100" ${app.status === 'REJECTED' ? 'disabled' : ''}>
+                                                <i class="bi bi-x-circle"></i> Reject
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                document.getElementById('applicantsContainer').innerHTML = applicantsHTML;
+
+            } catch (error) {
+                console.error('Error loading applicants:', error);
+                document.getElementById('applicantsContainer').innerHTML = `
+                    <div class="alert alert-danger">Failed to load applicants. Please try again.</div>
+                `;
+            }
+        }
+
+        function getStatusColor(status) {
+            switch(status) {
+                case 'APPLIED': return 'info';
+                case 'REVIEWED': return 'warning';
+                case 'REJECTED': return 'danger';
+                case 'HIRED': return 'success';
+                default: return 'secondary';
+            }
+        }
+    </script>
+</body>
+</html>

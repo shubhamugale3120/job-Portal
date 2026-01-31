@@ -35,10 +35,6 @@ router.post('/signin', async(req,res)=>{
     try {
         const user = await User.findOne({email});
         if(!user){
-            // For API testing, return JSON instead of rendering
-            if (req.headers['content-type'] === 'application/json') {
-                return res.status(401).json({ error: 'Invalid credentials' });
-            }
             return res.render('signin',{
                 error: 'Invalid credentials',
             });
@@ -46,9 +42,6 @@ router.post('/signin', async(req,res)=>{
         // Use comparePassword method to verify hashed password
         const isPasswordCorrect = await user.comparePassword(password);
         if(!isPasswordCorrect){
-            if (req.headers['content-type'] === 'application/json') {
-                return res.status(401).json({ error: 'Invalid credentials' });
-            }
             return res.render('signin',{
                 error: 'Invalid credentials',
             });
@@ -56,19 +49,16 @@ router.post('/signin', async(req,res)=>{
         const token = createTokenForUser(user);
         res.cookie('token', token);
         
-        // If API request (Postman), return JSON. If browser, redirect
-        if (req.headers['content-type'] === 'application/json') {
-            return res.json({ 
-                success: true, 
-                message: 'Logged in successfully',
-                user: { email: user.email, role: user.role }
-            });
+        // Redirect based on role
+        if (user.role === 'student') {
+            return res.redirect('/student/dashboard?success=Logged in successfully');
+        } else if (user.role === 'recruiter') {
+            return res.redirect('/recruiter/dashboard?success=Logged in successfully');
+        } else if (user.role === 'admin') {
+            return res.redirect('/admin/dashboard?success=Logged in successfully');
         }
         return res.redirect('/');
     } catch(err) {
-        if (req.headers['content-type'] === 'application/json') {
-            return res.status(500).json({ error: 'An error occurred' });
-        }
         return res.render('signin',{
             error: 'An error occurred',
         });

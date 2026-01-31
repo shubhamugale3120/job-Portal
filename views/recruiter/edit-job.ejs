@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+    <title>Edit Job - Job Portal</title>
+</head>
+<body>
+    <%- include('../partials/nav') %>
+    
+    <div class="container mt-4">
+        <% if (locals.success) { %>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle"></i> <%= locals.success %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <% } %>
+        <% if (locals.error) { %>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-circle"></i> <%= locals.error %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <% } %>
+
+        <h1 class="mb-4">Edit Job</h1>
+
+        <div class="card">
+            <div class="card-body">
+                <div id="loadingSpinner" class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+
+                <form id="editJobForm" action="" method="POST" class="d-none">
+                    <input type="hidden" name="_method" value="PATCH">
+                    
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Job Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="title" name="title" required minlength="5" maxlength="100">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Job Description <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="description" name="description" rows="6" required minlength="20"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="location" class="form-label">Location <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="location" name="location" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="jobType" class="form-label">Job Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="jobType" name="jobType" required>
+                                <option value="Full-time">Full-time</option>
+                                <option value="Part-time">Part-time</option>
+                                <option value="Contract">Contract</option>
+                                <option value="Internship">Internship</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="skills" class="form-label">Required Skills <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="skills" name="skills" required
+                               placeholder="e.g., JavaScript, React, Node.js (comma-separated)">
+                        <div class="form-text">Enter skills separated by commas</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="salary" class="form-label">Salary Range</label>
+                            <input type="text" class="form-control" id="salary" name="salary"
+                                   placeholder="e.g., 500000 - 1000000">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="Active">Active</option>
+                                <option value="Closed">Closed</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Update Job
+                        </button>
+                        <a href="/recruiter/dashboard" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <%- include('../partials/script') %>
+
+    <script>
+        // Get job ID from URL
+        const jobId = window.location.pathname.split('/').pop();
+
+        // Load job data on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch(`/jobs/${jobId}`);
+                if (!response.ok) {
+                    throw new Error('Job not found');
+                }
+
+                const job = await response.json();
+
+                // Populate form
+                document.getElementById('title').value = job.title;
+                document.getElementById('description').value = job.description;
+                document.getElementById('location').value = job.location;
+                document.getElementById('jobType').value = job.jobType;
+                document.getElementById('skills').value = job.skills.join(', ');
+                document.getElementById('salary').value = job.salary || '';
+                document.getElementById('status').value = job.status;
+
+                // Set form action
+                document.getElementById('editJobForm').action = `/jobs/${jobId}`;
+
+                // Hide spinner, show form
+                document.getElementById('loadingSpinner').classList.add('d-none');
+                document.getElementById('editJobForm').classList.remove('d-none');
+
+            } catch (error) {
+                console.error('Error loading job:', error);
+                document.getElementById('loadingSpinner').innerHTML = `
+                    <div class="alert alert-danger">
+                        Failed to load job details. <a href="/recruiter/dashboard">Go back to dashboard</a>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

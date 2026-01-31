@@ -1,50 +1,71 @@
 <nav class="navbar navbar-expand-lg bg-dark" data-bs-theme="dark">
   <div class="container-fluid">
-    <a class="navbar-brand" href="/">JOB PORTAL</a>
+    <a class="navbar-brand fw-bold" href="/">
+      <i class="bi bi-briefcase"></i> JOB PORTAL
+    </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarNavDropdown">
       <ul class="navbar-nav ms-auto">
+        <!-- Home -->
         <li class="nav-item">
-          <a class="nav-link" href="/">Home</a>
+          <a class="nav-link" href="/">
+            <i class="bi bi-house"></i> Home
+          </a>
         </li>
 
-        <!-- Public Navigation -->
+        <!-- Public - Browse Jobs -->
         <li class="nav-item">
-          <a class="nav-link" href="/jobs">Browse Jobs</a>
+          <a class="nav-link" href="/jobs/browse">
+            <i class="bi bi-search"></i> Browse Jobs
+          </a>
         </li>
 
         <!-- Student-Only Navigation -->
         <% if (locals.user && locals.user.role === 'student') { %>
           <li class="nav-item">
-            <a class="nav-link" href="/student/applications">My Applications</a>
+            <a class="nav-link" href="/student/dashboard">
+              <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/student/profile">Profile</a>
+            <a class="nav-link" href="/profile/me">
+              <i class="bi bi-person"></i> My Profile
+            </a>
           </li>
         <% } %>
 
         <!-- Recruiter-Only Navigation -->
         <% if (locals.user && locals.user.role === 'recruiter') { %>
           <li class="nav-item">
-            <a class="nav-link" href="/recruiter/post-job">Post Job</a>
+            <a class="nav-link" href="/recruiter/post-job">
+              <i class="bi bi-plus-circle"></i> Post Job
+            </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/recruiter/my-jobs">My Jobs</a>
+            <a class="nav-link" href="/recruiter/dashboard">
+              <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/recruiter/applicants">Applicants</a>
+            <a class="nav-link" href="/profile/me">
+              <i class="bi bi-building"></i> Company Profile
+            </a>
           </li>
         <% } %>
 
         <!-- Admin-Only Navigation -->
         <% if (locals.user && locals.user.role === 'admin') { %>
-          <li class="nav-item">
-            <a class="nav-link" href="/admin/users">Manage Users</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="/admin/jobs">Manage Jobs</a>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-shield"></i> Admin
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="/admin/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+              <li><a class="dropdown-item" href="/admin/users"><i class="bi bi-people"></i> Manage Users</a></li>
+              <li><a class="dropdown-item" href="/admin/jobs"><i class="bi bi-briefcase"></i> Manage Jobs</a></li>
+            </ul>
           </li>
         <% } %>
 
@@ -52,20 +73,23 @@
         <% if (locals.user) { %>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <%= locals.user.email %>
+              <i class="bi bi-person-circle"></i> <%= locals.user.email %>
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
-              <li><a class="dropdown-item" href="/user/profile">Profile Settings</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="/user/logout">Logout</a></li>
+              <li><a class="dropdown-item" href="/profile/me"><i class="bi bi-gear"></i> Profile Settings</a></li>
+              <li><a class="dropdown-item" href="/user/logout"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
             </ul>
           </li>
         <% } else { %>
           <li class="nav-item">
-            <a class="nav-link" href="/user/signup">Signup</a>
+            <a class="nav-link" href="/user/signup">
+              <i class="bi bi-person-plus"></i> Signup
+            </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/user/signin">Login</a>
+            <a class="nav-link" href="/user/signin">
+              <i class="bi bi-box-arrow-in-right"></i> Login
+            </a>
           </li>
         <% } %>
       </ul>

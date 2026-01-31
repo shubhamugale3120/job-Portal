@@ -18,6 +18,18 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(checkforAuthenticationCookie('token'));
+
+// Middleware to pass query parameters as locals for flash messages
+app.use((req, res, next) => {
+    if (req.query.success) {
+        res.locals.success = req.query.success;
+    }
+    if (req.query.error) {
+        res.locals.error = req.query.error;
+    }
+    next();
+});
+
 mongoose.connect('mongodb://127.0.0.1:27017/jobPortalDB').then(()=>{
     console.log("Connected to MongoDB");
 }).catch((err)=>{
@@ -44,6 +56,40 @@ app.get('/debug/user', (req, res) => {
     res.json({ user: req.user || 'Not authenticated' });
 });
 
+// ====== VIEW ROUTES FOR FRONTEND PAGES ======
+
+// Public route - Browse all jobs
+app.get('/jobs/browse', (req, res) => {
+    res.render('jobs', { user: req.user });
+});
+
+// Student Dashboard - requires student role
+const {requireRole} = require('./middleware/authorization');
+app.get('/student/dashboard', requireRole('student'), (req, res) => {
+    res.render('student/dashboard', { user: req.user });
+});
+
+// Recruiter Dashboard - requires recruiter role
+app.get('/recruiter/dashboard', requireRole('recruiter'), (req, res) => {
+    res.render('recruiter/dashboard', { user: req.user });
+});
+
+// Recruiter Post Job - requires recruiter role
+app.get('/recruiter/post-job', requireRole('recruiter'), (req, res) => {
+    res.render('recruiter/post-job', { user: req.user });
+});
+
+// Recruiter Edit Job - requires recruiter role
+app.get('/recruiter/edit-job/:id', requireRole('recruiter'), (req, res) => {
+    res.render('recruiter/edit-job', { user: req.user });
+});
+
+// Recruiter View Applicants - requires recruiter role
+app.get('/recruiter/view-applicants/:jobId', requireRole('recruiter'), (req, res) => {
+    res.render('recruiter/view-applicants', { user: req.user });
+});
+
+// ====== API ROUTES ======
 app.use('/user',userRouter);
 app.use('/jobs', jobRouter);
 app.use('/applications', applicationRouter);

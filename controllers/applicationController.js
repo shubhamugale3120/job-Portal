@@ -8,9 +8,9 @@ async function applyToJob(req, res) {
             resumeUrl: req.body.resumeUrl, // Expecting a URL or uploaded path (use multer later)
             coverLetter: req.body.coverLetter,
         });
-        return res.status(201).json(application);
+        return res.redirect('/student/dashboard?success=Applied successfully');
     } catch (err) {
-        return res.status(400).json({ error: err.message || 'Failed to apply' });
+        return res.redirect('/jobs/browse?error=' + encodeURIComponent(err.message || 'Failed to apply'));
     }
 }
 
@@ -40,13 +40,14 @@ async function updateApplicationStatus(req, res) {
     try {
         const application = await Application.findById(req.params.id);
         if (!application) {
-            return res.status(404).json({ error: 'Application not found' });
+            return res.redirect('/recruiter/dashboard?error=' + encodeURIComponent('Application not found'));
         }
         application.status = req.body.status || application.status;
         await application.save();
-        return res.json(application);
+        // Redirect back to applicants page
+        return res.redirect(`/recruiter/view-applicants/${application.jobId}?success=Application status updated to ${application.status}`);
     } catch (err) {
-        return res.status(400).json({ error: err.message || 'Failed to update status' });
+        return res.redirect('/recruiter/dashboard?error=' + encodeURIComponent(err.message || 'Failed to update status'));
     }
 }
 
