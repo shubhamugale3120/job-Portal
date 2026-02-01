@@ -30,7 +30,10 @@ app.use((req, res, next) => {
     next();
 });
 
-mongoose.connect('mongodb://127.0.0.1:27017/jobPortalDB').then(()=>{
+// Use MONGODB_URI from environment variables (for Docker/production), fallback to local
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/jobPortalDB';
+
+mongoose.connect(MONGODB_URI).then(()=>{
     console.log("Connected to MongoDB");
 }).catch((err)=>{
     console.log("MongoDB connection error:", err);
@@ -92,6 +95,21 @@ app.get('/recruiter/edit-job/:id', requireRole('recruiter'), (req, res) => {
 // Recruiter View Applicants - requires recruiter role
 app.get('/recruiter/view-applicants/:jobId', requireRole('recruiter'), (req, res) => {
     res.render('recruiter/view-applicants', { user: req.user });
+});
+
+// Recruiter View All Jobs - requires recruiter role
+app.get('/recruiter/my-jobs', requireRole('recruiter'), (req, res) => {
+    res.render('recruiter/my-jobs', { user: req.user });
+});
+
+// Recruiter View All Applications - requires recruiter role
+app.get('/recruiter/applications', requireRole('recruiter'), (req, res) => {
+    res.render('recruiter/applications', { user: req.user });
+});
+
+// Recruiter View Single Application - requires recruiter role
+app.get('/recruiter/view-application/:id', requireRole('recruiter'), (req, res) => {
+    res.render('recruiter/view-application', { user: req.user, applicationId: req.params.id });
 });
 
 // Profile View Routes - requires authentication and fetches fresh data from DB

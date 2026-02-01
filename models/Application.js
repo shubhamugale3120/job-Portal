@@ -22,7 +22,7 @@ const applicationSchema = new Schema({
     },
     status: {
         type: String,
-        enum: ['APPLIED', 'REVIEWED', 'REJECTED', 'HIRED'],
+        enum: ['APPLIED', 'REVIEWED', 'SHORTLISTED', 'REJECTED', 'HIRED'],
         default: 'APPLIED', // Tracks lifecycle of an application
     },
     appliedAt: {

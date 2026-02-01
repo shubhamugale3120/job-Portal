@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+    <title>Review Application - Job Portal</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            padding: 40px 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .page-header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .page-header p {
+            color: #a0aec0;
+        }
+
+        .back-btn {
+            color: #667eea;
+            text-decoration: none;
+            margin-bottom: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn:hover {
+            color: #764ba2;
+        }
+
+        /* Main Content */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            color: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .info-group {
+            margin-bottom: 20px;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #a0aec0;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-size: 16px;
+            color: white;
+            font-weight: 500;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .status-applied {
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+        }
+
+        .status-reviewed {
+            background: rgba(240, 174, 74, 0.2);
+            color: #f0ae4a;
+        }
+
+        .status-shortlisted {
+            background: rgba(56, 239, 125, 0.2);
+            color: #38ef7d;
+        }
+
+        .status-hired {
+            background: rgba(56, 239, 125, 0.2);
+            color: #38ef7d;
+        }
+
+        .status-rejected {
+            background: rgba(245, 87, 108, 0.2);
+            color: #f5576c;
+        }
+
+        .card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .cover-letter {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 10px;
+            line-height: 1.6;
+            color: #cbd5e0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-success {
+            background: rgba(56, 239, 125, 0.2);
+            color: #38ef7d;
+        }
+
+        .btn-success:hover {
+            background: #38ef7d;
+            color: #1a202c;
+        }
+
+        .btn-warning {
+            background: rgba(240, 174, 74, 0.2);
+            color: #f0ae4a;
+        }
+
+        .btn-warning:hover {
+            background: #f0ae4a;
+            color: #1a202c;
+        }
+
+        .btn-danger {
+            background: rgba(245, 87, 108, 0.2);
+            color: #f5576c;
+        }
+
+        .btn-danger:hover {
+            background: #f5576c;
+            color: white;
+        }
+
+        .btn-primary {
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+        }
+
+        .btn-primary:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .resume-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .resume-link:hover {
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+        }
+
+        .spinner {
+            text-align: center;
+            padding: 40px;
+            color: #a0aec0;
+        }
+
+        .error-message {
+            background: rgba(245, 87, 108, 0.2);
+            border-left: 4px solid #f5576c;
+            border-radius: 8px;
+            padding: 15px 20px;
+            color: #f5576c;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/nav') %>
+
+    <div class="container">
+        <!-- Back Button -->
+        <a href="/recruiter/applications" class="back-btn">
+            <i class="bi bi-arrow-left"></i> Back to Applications
+        </a>
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1><i class="bi bi-file-earmark-text me-2"></i> Application Review</h1>
+        </div>
+
+        <!-- Content -->
+        <div id="contentContainer" class="spinner">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <%- include('../partials/script') %>
+
+    <script>
+        // Load application details on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadApplicationDetails();
+        });
+
+        // Load application details
+        async function loadApplicationDetails() {
+            try {
+                const applicationId = '<%= applicationId %>';
+                
+                // Fetch all applications to find the one we need
+                const response = await fetch('/jobs/my-applications');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                const applications = data.data || [];
+                const application = applications.find(app => app._id === applicationId);
+
+                if (!application) {
+                    throw new Error('Application not found');
+                }
+
+                displayApplicationDetails(application);
+            } catch (error) {
+                console.error('Error loading application:', error);
+                document.getElementById('contentContainer').innerHTML = `
+                    <div class="error-message">
+                        <i class="bi bi-exclamation-circle"></i>
+                        Failed to load application details. Please try again.
+                    </div>
+                `;
+            }
+        }
+
+        // Display application details
+        function displayApplicationDetails(app) {
+            const container = document.getElementById('contentContainer');
+            const statusClass = getStatusClass(app.status);
+            const appliedDate = new Date(app.createdAt).toLocaleDateString('en-IN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            const html = `
+                <div class="content-grid">
+                    <!-- Applicant Information -->
+                    <div class="card">
+                        <div class="card-title">Applicant Information</div>
+                        
+                        <div class="info-group">
+                            <div class="info-label">Full Name</div>
+                            <div class="info-value">${app.studentId?.name || 'N/A'}</div>
+                        </div>
+
+                        <div class="info-group">
+                            <div class="info-label">Email</div>
+                            <div class="info-value">${app.studentId?.email || 'N/A'}</div>
+                        </div>
+
+                        <div class="info-group">
+                            <div class="info-label">Applied Date</div>
+                            <div class="info-value">${appliedDate}</div>
+                        </div>
+                    </div>
+
+                    <!-- Job Information -->
+                    <div class="card">
+                        <div class="card-title">Job Information</div>
+                        
+                        <div class="info-group">
+                            <div class="info-label">Job Title</div>
+                            <div class="info-value">${app.jobId?.title || 'N/A'}</div>
+                        </div>
+
+                        <div class="info-group">
+                            <div class="info-label">Location</div>
+                            <div class="info-value">${app.jobId?.location || 'N/A'}</div>
+                        </div>
+
+                        <div class="info-group">
+                            <div class="info-label">Application Status</div>
+                            <span class="status-badge ${statusClass}">
+                                ${formatStatus(app.status)}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Resume -->
+                    <div class="card">
+                        <div class="card-title">Resume</div>
+                        
+                        ${app.resumeUrl ? `
+                            <div class="info-group">
+                                <a href="${app.resumeUrl}" target="_blank" class="resume-link">
+                                    <i class="bi bi-file-earmark-pdf"></i> View Resume
+                                </a>
+                            </div>
+                        ` : `
+                            <div class="info-value" style="color: #a0aec0;">No resume provided</div>
+                        `}
+                    </div>
+
+                    <!-- Cover Letter -->
+                    ${app.coverLetter ? `
+                        <div class="card">
+                            <div class="card-title">Cover Letter</div>
+                            <div class="cover-letter">${app.coverLetter}</div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Action Buttons -->
+                    <div class="card full-width">
+                        <div class="card-title">Update Application Status</div>
+                        <div class="action-buttons">
+                            <form action="/applications/${app._id}/status" method="POST" style="flex: 1;">
+                                <input type="hidden" name="status" value="REVIEWED">
+                                <button type="submit" class="btn btn-warning" style="width: 100%;">
+                                    <i class="bi bi-eye"></i> Mark as Reviewed
+                                </button>
+                            </form>
+                            <form action="/applications/${app._id}/status" method="POST" style="flex: 1;">
+                                <input type="hidden" name="status" value="SHORTLISTED">
+                                <button type="submit" class="btn btn-success" style="width: 100%;">
+                                    <i class="bi bi-star"></i> Shortlist
+                                </button>
+                            </form>
+                            <form action="/applications/${app._id}/status" method="POST" style="flex: 1;">
+                                <input type="hidden" name="status" value="HIRED">
+                                <button type="submit" class="btn btn-success" style="width: 100%;">
+                                    <i class="bi bi-check-circle"></i> Hire
+                                </button>
+                            </form>
+                            <form action="/applications/${app._id}/status" method="POST" style="flex: 1;">
+                                <input type="hidden" name="status" value="REJECTED">
+                                <button type="submit" class="btn btn-danger" style="width: 100%;">
+                                    <i class="bi bi-x-circle"></i> Reject
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function getStatusClass(status) {
+            const normalized = (status || '').toLowerCase();
+            const statusMap = {
+                'applied': 'status-applied',
+                'reviewed': 'status-reviewed',
+                'shortlisted': 'status-shortlisted',
+                'hired': 'status-hired',
+                'rejected': 'status-rejected'
+            };
+            return statusMap[normalized] || 'status-applied';
+        }
+
+        function formatStatus(status) {
+            const normalized = (status || '').toLowerCase();
+            const labels = {
+                'applied': 'Applied',
+                'reviewed': 'Under Review',
+                'shortlisted': 'Shortlisted',
+                'hired': 'Hired',
+                'rejected': 'Rejected'
+            };
+            return labels[normalized] || status;
+        }
+    </script>
+</body>
+</html>
