@@ -1,6 +1,7 @@
 const JWT = require('jsonwebtoken');
 
-const JWT_SECRET = "$123shu";
+// Use environment variable for production, fallback for local development
+const JWT_SECRET = process.env.JWT_SECRET || "$123shu";
 
 function createTokenForUser(user){
     const payload = {
