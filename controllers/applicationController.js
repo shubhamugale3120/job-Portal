@@ -6,20 +6,109 @@ async function applyToJob(req, res) {
         
         // Validate required field
         if (!resumeUrl || !resumeUrl.trim()) {
-            return res.redirect('/jobs/browse?error=' + encodeURIComponent('Resume URL is required'));
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Resume URL is required' 
+            });
         }
         
+        // Check if student has already applied to this job (prevent duplicates)
+        const existingApplication = await Application.findOne({
+            jobId: req.params.jobId,
+            studentId: req.user._id
+        });
+        
+        if (existingApplication) {
+            // Industry-standard: Return 409 Conflict status code for duplicate submission
+            return res.status(409).json({ 
+                success: false, 
+                error: 'You have already applied to this job. Wait for the recruiter to review your application.' 
+            });
+        }
+        
+        // Create new application
         const application = await Application.create({
             jobId: req.params.jobId,
             studentId: req.user._id,
             resumeUrl: resumeUrl.trim(),
             coverLetter: coverLetter ? coverLetter.trim() : '',
+            status: 'APPLIED'
         });
         
-        return res.redirect('/student/my-applications?success=Applied successfully! Check your applications page.');
+        return res.status(201).json({ 
+            success: true, 
+            message: 'Applied successfully! Check your applications page.',
+            data: application
+        });
     } catch (err) {
         console.error('Apply to job error:', err);
-        return res.redirect('/jobs/browse?error=' + encodeURIComponent(err.message || 'Failed to apply. Please try again.'));
+        return res.status(500).json({ 
+            success: false, 
+            error: err.message || 'Failed to apply. Please try again.' 
+        });
+    }
+}
+
+/**
+ * Check if student has applied to a specific job
+ * Purpose: Prevent duplicate applications in UI
+ * Returns: { hasApplied: true/false, applicationStatus: 'APPLIED'/'SHORTLISTED'/etc }
+ */
+async function checkApplicationStatus(req, res) {
+    try {
+        const application = await Application.findOne({
+            jobId: req.params.jobId,
+            studentId: req.user._id
+        });
+        
+        if (!application) {
+            return res.json({
+                success: true,
+                hasApplied: false
+            });
+        }
+        
+        return res.json({
+            success: true,
+            hasApplied: true,
+            status: application.status,
+            appliedAt: application.appliedAt
+        });
+    } catch (err) {
+        console.error('Error checking application status:', err);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to check application status'
+        });
+    }
+}
+
+/**
+ * Get student's applied jobs (for frontend to disable apply buttons)
+ * Purpose: Quick lookup to show which jobs student has applied to
+ */
+async function getAppliedJobs(req, res) {
+    try {
+        const applications = await Application.find({ 
+            studentId: req.user._id 
+        }).select('jobId status createdAt').lean();
+        
+        const appliedJobs = applications.map(app => ({
+            jobId: app.jobId.toString(),
+            status: app.status,
+            appliedAt: app.createdAt
+        }));
+        
+        return res.json({
+            success: true,
+            data: appliedJobs
+        });
+    } catch (err) {
+        console.error('Error fetching applied jobs:', err);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to fetch applied jobs'
+        });
     }
 }
 
@@ -75,6 +164,8 @@ async function updateApplicationStatus(req, res) {
 
 module.exports = {
     applyToJob,
+    checkApplicationStatus,
+    getAppliedJobs,
     getMyApplications,
     getApplicationsForJob,
     updateApplicationStatus,

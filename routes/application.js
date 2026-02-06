@@ -2,6 +2,8 @@ const { Router } = require('express');
 const { requireRole } = require('../middleware/authorization');
 const {
     applyToJob,
+    checkApplicationStatus,
+    getAppliedJobs,
     getMyApplications,
     getApplicationsForJob,
     updateApplicationStatus,
@@ -9,8 +11,14 @@ const {
 
 const router = Router();
 
-// Student: apply to a job
+// Student: apply to a job (API endpoint - returns JSON)
 router.post('/:jobId/apply', requireRole('student'), applyToJob);
+
+// Student: check if applied to a specific job
+router.get('/:jobId/check', requireRole('student'), checkApplicationStatus);
+
+// Student: get all applied jobs (for browse page)
+router.get('/applied/list', requireRole('student'), getAppliedJobs);
 
 // Student: view own applications
 router.get('/me', requireRole('student'), getMyApplications);

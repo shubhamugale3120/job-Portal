@@ -361,6 +361,23 @@
             </div>
         </div>
 
+        <!-- AI Recommended Jobs Section -->
+        <div class="content-section" style="margin-bottom: 30px;">
+            <div class="content-header">
+                <h2><i class="bi bi-robot me-2"></i> AI Recommended Jobs For You</h2>
+                <a href="/jobs/browse" class="btn-view-all">Browse All Jobs</a>
+            </div>
+            
+            <div id="recommendationsContainer" style="margin-top: 20px;">
+                <div class="text-center" style="padding: 40px;">
+                    <div class="spinner-border text-light" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p style="color: #a0aec0; margin-top: 15px;">Analyzing your profile...</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Content -->
         <div class="content-section">
             <div class="content-header">
@@ -372,6 +389,65 @@
                 <div class="no-data">
                     <i class="bi bi-inbox"></i>
                     <p>No applications yet. Start applying to jobs!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Job Details Modal -->
+    <div class="modal fade" id="jobDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content" style="background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%); border: 1px solid rgba(255,255,255,0.1);">
+                <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <h5 class="modal-title" style="color: white;">Job Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="jobDetailsContent" style="color: #e2e8f0;">
+                    <!-- Content loaded dynamically -->
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.1);">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Apply Modal -->
+    <div class="modal fade" id="applyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content" style="background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%); border: 1px solid rgba(255,255,255,0.1);">
+                <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <h5 class="modal-title" style="color: white;">Apply for Job</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h6 style="color: #38ef7d; margin-bottom: 20px;" id="applyJobTitle">Job Title</h6>
+                    
+                    <form id="applyForm">
+                        <input type="hidden" id="applyJobId">
+                        
+                        <div class="mb-3">
+                            <label for="resumeUrl" class="form-label" style="color: #e2e8f0;">Resume URL <span class="text-danger">*</span></label>
+                            <input type="url" class="form-control" id="resumeUrl" required 
+                                   placeholder="https://drive.google.com/..." 
+                                   style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                            <small style="color: #a0aec0;">Provide a link to your resume (Google Drive, Dropbox, etc.)</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="coverLetter" class="form-label" style="color: #e2e8f0;">Cover Letter (Optional)</label>
+                            <textarea class="form-control" id="coverLetter" rows="4" 
+                                      placeholder="Why are you interested in this position?"
+                                      style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white;"></textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn" 
+                                    style="background: linear-gradient(135deg, #38ef7d 0%, #11998e 100%); color: white; font-weight: 600;">
+                                <i class="bi bi-send"></i> Submit Application
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -477,6 +553,368 @@
                 </div>
             `;
         }
+
+        /**
+         * Load AI-Powered Job Recommendations
+         * 
+         * Why: Show personalized jobs to increase engagement
+         * How: Calls /api/recommendations/jobs endpoint
+         * When: Runs on page load automatically
+         */
+        async function loadRecommendations() {
+            const container = document.getElementById('recommendationsContainer');
+            
+            try {
+                // Call AI recommendation API
+                const response = await fetch('/api/recommendations/jobs?limit=6');
+                const data = await response.json();
+                
+                // Check if recommendations were found
+                if (!data.success || !data.data || data.data.length === 0) {
+                    // No recommendations - encourage profile completion
+                    container.innerHTML = `
+                        <div style="background: rgba(102, 126, 234, 0.1); 
+                                    border: 1px solid rgba(102, 126, 234, 0.3); 
+                                    border-radius: 10px; 
+                                    padding: 30px; 
+                                    text-align: center;">
+                            <i class="bi bi-lightbulb" style="font-size: 48px; color: #667eea;"></i>
+                            <h4 style="color: white; margin-top: 15px;">Complete Your Profile for Smart Recommendations!</h4>
+                            <p style="color: #a0aec0; margin: 10px 0 20px;">
+                                Add your skills, experience, and preferences to get AI-powered job suggestions
+                            </p>
+                            <a href="/profile/edit" class="btn-view-all">
+                                <i class="bi bi-person-gear"></i> Complete Profile
+                            </a>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Display recommendations
+                container.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px;">
+                        ${data.data.map(job => `
+                            <div class="recommendation-card">
+                                <!-- Match Score Badge -->
+                                <div style="position: absolute; top: 15px; right: 15px;">
+                                    <span style="background: linear-gradient(135deg, #38ef7d 0%, #11998e 100%);
+                                                 color: white;
+                                                 padding: 8px 15px;
+                                                 border-radius: 20px;
+                                                 font-weight: 700;
+                                                 font-size: 14px;
+                                                 box-shadow: 0 4px 15px rgba(56, 239, 125, 0.3);">
+                                        ${job.matchScore}% Match
+                                    </span>
+                                </div>
+                                
+                                <!-- Job Title -->
+                                <h4 style="color: white; font-size: 18px; font-weight: 700; margin-bottom: 10px; padding-right: 80px;">
+                                    ${escapeHtml(job.title)}
+                                </h4>
+                                
+                                <!-- Job Meta Information -->
+                                <div style="color: #a0aec0; font-size: 13px; margin-bottom: 15px;">
+                                    <div style="margin-bottom: 5px;">
+                                        <i class="bi bi-building"></i> ${escapeHtml(job.company || 'Company Name')}
+                                    </div>
+                                    <div style="margin-bottom: 5px;">
+                                        <i class="bi bi-geo-alt"></i> ${escapeHtml(job.location)}
+                                        <span style="margin: 0 8px;">•</span>
+                                        <i class="bi bi-briefcase"></i> ${escapeHtml(job.jobType)}
+                                    </div>
+                                    <div>
+                                        <i class="bi bi-cash-stack"></i> <strong>${escapeHtml(job.salary || 'Competitive')}</strong>
+                                    </div>
+                                </div>
+                                
+                                <!-- Why This Job Section (Explainable AI) -->
+                                <div style="margin: 15px 0; padding: 12px; 
+                                            background: rgba(56, 239, 125, 0.05); 
+                                            border-left: 3px solid #38ef7d; 
+                                            border-radius: 5px;">
+                                    <div style="color: #38ef7d; font-weight: 600; font-size: 12px; margin-bottom: 8px;">
+                                        <i class="bi bi-stars"></i> WHY THIS JOB:
+                                    </div>
+                                    ${(job.matchReasons || []).slice(0, 2).map(reason => `
+                                        <div style="color: #a0aec0; font-size: 12px; margin-bottom: 5px;">
+                                            <i class="bi bi-check-circle-fill" style="color: #38ef7d;"></i> ${escapeHtml(reason)}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                
+                                <!-- Skills Tags -->
+                                ${job.skills && job.skills.length > 0 ? `
+                                    <div style="margin: 15px 0;">
+                                        ${job.skills.slice(0, 4).map(skill => `
+                                            <span style="display: inline-block;
+                                                         background: rgba(102, 126, 234, 0.2);
+                                                         color: #667eea;
+                                                         padding: 4px 10px;
+                                                         border-radius: 15px;
+                                                         font-size: 11px;
+                                                         margin: 0 5px 5px 0;
+                                                         font-weight: 600;">
+                                                ${escapeHtml(skill)}
+                                            </span>
+                                        `).join('')}
+                                        ${job.skills.length > 4 ? `<span style="color: #667eea; font-size: 11px;">+${job.skills.length - 4} more</span>` : ''}
+                                    </div>
+                                ` : ''}
+                                
+                                <!-- Action Buttons -->
+                                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                                    <button class="btn-view-details" 
+                                       data-job-id="${job._id}"
+                                       style="flex: 1;
+                                              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                              color: white;
+                                              padding: 10px 20px;
+                                              border-radius: 8px;
+                                              border: none;
+                                              text-align: center;
+                                              font-weight: 600;
+                                              font-size: 13px;
+                                              cursor: pointer;
+                                              transition: transform 0.2s;">
+                                        <i class="bi bi-eye"></i> View Details
+                                    </button>
+                                    <button class="btn-apply-job"
+                                       data-job-id="${job._id}"
+                                       data-job-title="${escapeHtml(job.title)}"
+                                       style="flex: 1;
+                                              background: linear-gradient(135deg, #38ef7d 0%, #11998e 100%);
+                                              color: white;
+                                              padding: 10px 20px;
+                                              border-radius: 8px;
+                                              border: none;
+                                              text-align: center;
+                                              font-weight: 600;
+                                              font-size: 13px;
+                                              cursor: pointer;
+                                              transition: transform 0.2s;">
+                                        <i class="bi bi-check-circle"></i> Apply Now
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                // Attach event listeners to dynamically created buttons
+                attachRecommendationButtonListeners();
+                
+            } catch (error) {
+                console.error('Error loading recommendations:', error);
+                container.innerHTML = `
+                    <div style="background: rgba(245, 87, 108, 0.1); 
+                                border: 1px solid rgba(245, 87, 108, 0.3); 
+                                border-radius: 10px; 
+                                padding: 20px; 
+                                text-align: center;">
+                        <i class="bi bi-exclamation-triangle" style="font-size: 36px; color: #f5576c;"></i>
+                        <p style="color: #a0aec0; margin-top: 10px;">
+                            Failed to load recommendations. Please refresh the page.
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        /**
+         * Attach event listeners to recommendation buttons
+         * Using event delegation for dynamically created elements
+         */
+        function attachRecommendationButtonListeners() {
+            // View Details buttons
+            document.querySelectorAll('.btn-view-details').forEach(button => {
+                button.addEventListener('click', function() {
+                    const jobId = this.getAttribute('data-job-id');
+                    viewJobDetails(jobId);
+                });
+            });
+
+            // Apply buttons
+            document.querySelectorAll('.btn-apply-job').forEach(button => {
+                button.addEventListener('click', function() {
+                    const jobId = this.getAttribute('data-job-id');
+                    const jobTitle = this.getAttribute('data-job-title');
+                    openApplyModal(jobId, jobTitle);
+                });
+            });
+        }
+
+        /**
+         * Escape HTML to prevent XSS attacks
+         * Why: User-generated content must be sanitized
+         */
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        /**
+         * View Job Details in Modal
+         */
+        async function viewJobDetails(jobId) {
+            try {
+                const response = await fetch(`/jobs/${jobId}`);
+                if (!response.ok) throw new Error('Failed to load job');
+                
+                const job = await response.json();
+
+                // Populate modal
+                document.getElementById('jobDetailsContent').innerHTML = `
+                    <div style="color: #e2e8f0;">
+                        <h5 style="color: white; margin-bottom: 15px;">${escapeHtml(job.title)}</h5>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <div style="margin-bottom: 8px;"><i class="bi bi-geo-alt"></i> <strong>Location:</strong> ${escapeHtml(job.location)}</div>
+                            <div style="margin-bottom: 8px;"><i class="bi bi-briefcase"></i> <strong>Type:</strong> ${escapeHtml(job.jobType)}</div>
+                            <div style="margin-bottom: 8px;"><i class="bi bi-cash-stack"></i> <strong>Salary:</strong> ${escapeHtml(job.salary || 'Not specified')}</div>
+                            <div style="margin-bottom: 8px;"><i class="bi bi-people"></i> <strong>Applications:</strong> ${job.applicationCount || 0}</div>
+                        </div>
+                        
+                        <h6 style="color: #38ef7d; margin-top: 20px; margin-bottom: 10px;">About this job</h6>
+                        <p style="line-height: 1.6;">${escapeHtml(job.description)}</p>
+                        
+                        <h6 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Required Skills</h6>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px;">
+                            ${job.skills.map(skill => `
+                                <span style="background: rgba(102, 126, 234, 0.2);
+                                             color: #667eea;
+                                             padding: 6px 12px;
+                                             border-radius: 15px;
+                                             font-size: 12px;
+                                             font-weight: 600;">
+                                    ${escapeHtml(skill)}
+                                </span>
+                            `).join('')}
+                        </div>
+                        
+                        <small style="color: #a0aec0; margin-top: 15px; display: block;">Posted on ${new Date(job.createdAt).toLocaleDateString()}</small>
+                    </div>
+                `;
+
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('jobDetailsModal'));
+                modal.show();
+
+            } catch (error) {
+                console.error('Error loading job details:', error);
+                alert('Failed to load job details. Please try again.');
+            }
+        }
+
+        /**
+         * Open Apply Modal
+         */
+        function openApplyModal(jobId, jobTitle) {
+            try {
+                document.getElementById('applyJobTitle').textContent = jobTitle;
+                document.getElementById('applyJobId').value = jobId;
+                
+                // Reset form
+                document.getElementById('applyForm').reset();
+                document.getElementById('applyJobId').value = jobId; // Reset clears this
+
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('applyModal'));
+                modal.show();
+
+            } catch (error) {
+                console.error('Error opening apply modal:', error);
+                alert('An error occurred. Please try again.');
+            }
+        }
+
+        /**
+         * Handle Application Submission
+         */
+        async function submitApplication(e) {
+            e.preventDefault();
+            
+            const jobId = document.getElementById('applyJobId').value;
+            const resumeUrl = document.getElementById('resumeUrl').value.trim();
+            const coverLetter = document.getElementById('coverLetter').value.trim();
+            
+            if (!resumeUrl) {
+                alert('Please provide your resume URL');
+                return;
+            }
+            
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Applying...';
+            
+            try {
+                const response = await fetch(`/applications/${jobId}/apply`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ resumeUrl, coverLetter })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('applyModal')).hide();
+                    
+                    // Show success message
+                    alert('Application submitted successfully!');
+                    
+                    // Reload recommendations and applications
+                    loadRecommendations();
+                    loadApplications();
+                } else {
+                    alert(result.error || 'Failed to submit application');
+                }
+            } catch (error) {
+                console.error('Error submitting application:', error);
+                alert('Failed to submit application. Please try again.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-send"></i> Submit Application';
+            }
+        }
+
+        // Attach form handler
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('applyForm')?.addEventListener('submit', submitApplication);
+        });
+
+        // Load recommendations when page loads
+        // Why: Show personalized content immediately
+        document.addEventListener('DOMContentLoaded', () => {
+            loadRecommendations();
+        });
     </script>
-</body>
-</html>
+
+    <!-- Recommendation Card Styling -->
+    <style>
+        .recommendation-card {
+            background: linear-gradient(135deg, rgba(45, 55, 72, 0.9) 0%, rgba(26, 32, 44, 0.9) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .recommendation-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            border-color: rgba(102, 126, 234, 0.5);
+        }
+
+        .recommendation-card button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4) !important;
+            opacity: 0.95;
+        }
+
+        .recommendation-card button:active {
+            transform: translateY(0);

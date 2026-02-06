@@ -5,7 +5,7 @@ const Application = require('../models/Application');
 async function getMyJobs(req, res) {
     try {
         const jobs = await Job.find({ postedBy: req.user._id })
-            .select('title description location jobType salary skills status createdAt applicationCount')
+            .select('_id title description location jobType salary skills status createdAt applicationCount')
             .sort({ createdAt: -1 })
             .lean();
 
@@ -112,7 +112,7 @@ async function listJobs(req, res) {
             .skip(skip)
             .limit(limit + 1) // Get one extra to check if more pages exist
             .sort({ createdAt: -1 })
-            .select('title description location jobType salary skills createdAt status applicationCount')
+            .select('_id title description location jobType salary skills createdAt status applicationCount')
             .lean(); // 50% faster for read-only data
 
         // Check if there are more pages

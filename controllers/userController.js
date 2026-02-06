@@ -1,4 +1,5 @@
 const User = require('../models/user');
+const { StudentProfile, RecruiterProfile } = require('../models/profile');
 const bcrypt = require('bcrypt');
 
 // Get current user profile
@@ -89,6 +90,49 @@ async function updateProfile(req, res) {
         const savedUser = await user.save();
         console.log('Profile saved successfully:', { name: savedUser.name, email: savedUser.email, phone: savedUser.phone });
         
+        // For students: Also create/update StudentProfile for AI recommendations
+        // Why: StudentProfile contains skills and preferences needed for job recommendations
+        if (user.role === 'student') {
+            try {
+                // Extract skills from bio (comma-separated)
+                // Example: "Node.js, React, MongoDB" → ["Node.js", "React", "MongoDB"]
+                const skillsArray = bio 
+                    ? bio.split(',').map(s => s.trim()).filter(s => s && s.length > 0)
+                    : [];
+                
+                console.log('Creating StudentProfile with skills:', skillsArray);
+                
+                // Create or update StudentProfile
+                const studentProfile = await StudentProfile.findOneAndUpdate(
+                    { userId: user._id },
+                    {
+                        userId: user._id,
+                        skills: skillsArray.length > 0 ? skillsArray : ['unspecified'],
+                        city: 'Not specified',
+                        bio: bio || '',
+                        phoneNumber: phone || '',
+                        // Add default preferences for AI recommendations
+                        preferences: {
+                            preferredJobType: 'Full-time',
+                            preferredLocation: 'Any',
+                            expectedSalary: 0,
+                            willingToRelocate: true,
+                            remoteWorkPreference: 'flexible'
+                        }
+                    },
+                    { upsert: true, new: true }
+                );
+                console.log('✅ StudentProfile created/updated:', {
+                    id: studentProfile._id,
+                    skills: studentProfile.skills,
+                    userId: studentProfile.userId
+                });
+            } catch (profileError) {
+                console.error('⚠️ StudentProfile error:', profileError.message);
+                // Continue anyway - the user profile was still updated
+            }
+        }
+        
         // Redirect to profile view page with success message
         const redirectUrl = user.role === 'student' ? '/profile/view' : '/profile/view';
         res.redirect(redirectUrl + '?success=' + encodeURIComponent('Profile updated successfully!'));
@@ -108,5 +152,31 @@ async function updateProfile(req, res) {
 module.exports = {
     getProfile,
     renderEditProfile,
-    updateProfile
+    updateProfile,
+    // Debug function to check StudentProfile
+    checkStudentProfile: async (req, res) => {
+        try {
+            if (!req.user) {
+                return res.json({ error: 'Not authenticated' });
+            }
+            
+            const studentProfile = await StudentProfile.findOne({ userId: req.user._id });
+            const user = await User.findById(req.user._id);
+            
+            res.json({
+                userId: req.user._id,
+                userRole: user?.role,
+                userBio: user?.bio,
+                studentProfileExists: !!studentProfile,
+                studentProfile: studentProfile ? {
+                    id: studentProfile._id,
+                    skills: studentProfile.skills,
+                    bio: studentProfile.bio,
+                    city: studentProfile.city
+                } : null
+            });
+        } catch (error) {
+            res.json({ error: error.message });
+        }
+    }
 };

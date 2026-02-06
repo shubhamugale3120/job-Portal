@@ -5,30 +5,45 @@ const userRouter = require('./routes/user');
 const jobRouter = require('./routes/job');
 const applicationRouter = require('./routes/application');
 const profileRouter = require('./routes/profile');
+// AI Recommendation Routes - provides personalized job suggestions to students
+// Why: Increases user engagement and application rates by showing relevant jobs
+const recommendationRouter = require('./routes/recommendations');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const errorHandler = require('./middleware/errorHandler');
-const {checkforAuthenticationCookie} = require('./middleware/authetication')
+const { setupSecurity } = require('./middleware/security');
+const {checkforAuthenticationCookie} = require('./middleware/authetication');
+
+// Rate Limiting Middleware - prevents abuse and DoS attacks
+// Why: Protects server from spam, brute force attacks, and excessive API calls
+const { apiLimiter, authLimiter } = require('./middleware/rateLimiter');
+
 const app = express();
+setupSecurity(app);
 const PORT = process.env.PORT || 3000;
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
+// ===== SECURITY & RATE LIMITING MIDDLEWARE =====
+// Why this order matters: Security first, then parsing, then authentication
+
+// 1. Trust proxy (for rate limiting behind load balancers/nginx)
+// Why: Ensures correct IP addresses when behind proxy
+app.set('trust proxy', 1);
+
+// 2. Apply general API rate limiter to ALL routes
+// Why: Prevents DoS attacks and API abuse (100 requests/minute per IP)
+// Applied before other middleware to block attackers early
+app.use(apiLimiter);
+
+// 3. Body parsers (after rate limiting, before routes)
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+
+// 4. Cookie parser and authentication
 app.use(cookieParser());
 app.use(checkforAuthenticationCookie('token'));
-
-// Middleware to pass query parameters as locals for flash messages
-app.use((req, res, next) => {
-    if (req.query.success) {
-        res.locals.success = req.query.success;
-    }
-    if (req.query.error) {
-        res.locals.error = req.query.error;
-    }
-    next();
-});
 
 // Use MONGODB_URI from environment variables (for Docker/production), fallback to local
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/jobPortalDB';
@@ -39,6 +54,19 @@ mongoose.connect(MONGODB_URI).then(()=>{
     console.log("MongoDB connection error:", err);
     // process.exit(1);
 })
+
+// Middleware to pass query parameters as locals for flash messages
+// This must be AFTER body/cookie parsing but BEFORE routes
+app.use((req, res, next) => {
+    // Only read query parameters, don't modify req.query
+    if (req.query && req.query.success) {
+        res.locals.success = req.query.success;
+    }
+    if (req.query && req.query.error) {
+        res.locals.error = req.query.error;
+    }
+    next();
+});
 
 app.get('/',(req,res)=>{
     res.render('home', {
@@ -54,10 +82,24 @@ app.get('/signup',(req,res)=>{
     res.render('signup');
 });
 
-// Debug endpoint: check current user
-app.get('/debug/user', (req, res) => {
-    res.json({ user: req.user || 'Not authenticated' });
+// ===== AUTHENTICATION ROUTES WITH STRICT RATE LIMITING =====
+// Why stricter limits: Prevent brute force password attacks
+// Limit: 5 attempts per 15 minutes per IP
+
+// Apply auth limiter to signin POST route
+app.post('/user/signin', authLimiter, (req, res, next) => {
+    // Authent limiter allows only 5 attempts per 15 minutes
+    // Why: Prevents password guessing attacks
+    next();
 });
+
+// Apply auth limiter to signup POST route  
+app.post('/user/signup', authLimiter, (req, res, next) => {
+    // Why also limit signup: Prevents spam account creation
+    next();
+});
+
+// ✅ Debug endpoints removed for production security
 
 // ====== VIEW ROUTES FOR FRONTEND PAGES ======
 
@@ -169,11 +211,42 @@ app.use('/jobs', jobRouter);
 app.use('/applications', applicationRouter);
 app.use('/profile', profileRouter);
 
+// Register AI recommendation routes
+// Why: Provides /api/recommendations/* endpoints for job suggestions
+// This must be registered after authentication middleware so req.user is available
+app.use(recommendationRouter);
+
+// ===== HEALTH CHECK ENDPOINT =====
+// Why: Deployment platforms use this to monitor app status
+// Heroku, AWS, DigitalOcean, etc check /health to ensure app is alive
+app.get('/health', (req, res) => {
+    const healthcheck = {
+        uptime: process.uptime(),
+        message: 'OK',
+        timestamp: Date.now(),
+        mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        environment: process.env.NODE_ENV || 'development'
+    };
+    res.status(200).json(healthcheck);
+});
 
 app.use(errorHandler);
 
 app.listen(PORT,()=>{
-    console.log('Server is running on port', PORT);
+    const env = process.env.NODE_ENV || 'development';
+    console.log(`
+╔════════════════════════════════════════════╗
+║     🚀 SERVER STARTED SUCCESSFULLY         ║
+║  Environment: ${env.toUpperCase().padEnd(27)} ║
+║  Port: ${PORT.toString().padEnd(36)} ║
+║  PID: ${process.pid.toString().padEnd(37)} ║
+╚════════════════════════════════════════════╝
+    `);
+    if (env === 'development') {
+        console.log('📌 Development Mode: Hot reload enabled with nodemon\n');
+    } else {
+        console.log('✅ Production Mode: Running with optimizations\n');
+    }
 });
 
 

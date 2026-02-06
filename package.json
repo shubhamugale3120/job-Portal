@@ -1,23 +1,46 @@
 {
-  "name": "project_work_nodejs",
-  "version": "1.0.0",
+  "name": "ai-job-portal",
+  "version": "1.0.0",   
   "main": "index.js",
-  "scripts": {
-    "start": "nodemon index.js"
+  "description": "AI-Powered Job Portal with Advanced Security Features",
+  "engines": {
+    "node": "18.x || 20.x",
+    "npm": "9.x || 10.x"
   },
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "production": "NODE_ENV=production node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Shubham Ugale",
+  "license": "ISC",   
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",                      
     "ejs": "^4.0.1",
     "express": "^5.2.1",
+    "express-mongo-sanitize": "^2.2.0",   
+    "express-rate-limit": "^8.2.1",       
     "express-validator": "^7.3.1",
+    "helmet": "^8.1.0",                    
     "jsonwebtoken": "^9.0.3",
     "method-override": "^3.0.0",
     "mongoose": "^9.1.5",
-    "multer": "^2.0.2",
+    "multer": "^2.0.2"
+  },
+  "devDependencies": {
     "nodemon": "^3.1.11"
-  }
+
+  },
+  "keywords": [                            
+    "job-portal",
+    "AI-recommendations",
+    "nodejs",
+    "express",
+    "mongodb",
+    "rate-limiting",
+    "JWT-authentication"
+  ]
 }

@@ -432,9 +432,11 @@
         let currentPage = 1;
         let currentJobId = null;
         const limit = 10;
+        let appliedJobs = new Map(); // { jobId: { hasApplied: true, status: 'APPLIED' } }
 
         // Load jobs on page load
         document.addEventListener('DOMContentLoaded', () => {
+            loadAppliedJobs();
             loadJobs();
         });
 
@@ -447,6 +449,30 @@
             <% } %>
         }
 
+        /**
+         * Load list of jobs student has applied to
+         * Purpose: Disable apply buttons for already-applied jobs
+         */
+        async function loadAppliedJobs() {
+            if (!isStudentUser()) return;
+            
+            try {
+                const response = await fetch('/applications/applied/list');
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    result.data.forEach(app => {
+                        appliedJobs.set(app.jobId, {
+                            hasApplied: true,
+                            status: app.status
+                        });
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading applied jobs:', error);
+            }
+        }
+
         // Handle filter form submission
         document.getElementById('filterForm').addEventListener('submit', (e) => {
             e.preventDefault();
@@ -457,6 +483,8 @@
         // Load jobs function with filters
         async function loadJobs() {
             try {
+                console.log('Loading jobs...');
+                
                 // Build query parameters
                 const params = new URLSearchParams();
                 params.append('page', currentPage);
@@ -478,8 +506,17 @@
                 if (salaryMax) params.append('salaryMax', salaryMax * 100000);
 
                 // Fetch jobs from API
-                const response = await fetch(`/jobs?${params.toString()}`);
+                const url = `/jobs?${params.toString()}`;
+                console.log('Fetching from:', url);
+                
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const result = await response.json();
+                console.log('Jobs loaded:', result.data?.length || 0, 'jobs');
 
                 // Display jobs
                 displayJobs(result.data);
@@ -490,9 +527,21 @@
             } catch (error) {
                 console.error('Error loading jobs:', error);
                 document.getElementById('jobsContainer').innerHTML = `
-                    <div class="alert alert-danger">Failed to load jobs. Please try again.</div>
+                    <div class="alert alert-danger">
+                        <strong>Error loading jobs:</strong> ${error.message}
+                        <br><small>Check the browser console for details.</small>
+                    </div>
                 `;
             }
+        }
+
+        /**
+         * Escape HTML to prevent XSS attacks
+         */
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // Display jobs in cards
@@ -506,53 +555,101 @@
                 return;
             }
 
-            const jobsHTML = jobs.map(job => `
-                <div class="job-card">
-                    <div class="job-header">
-                        <h3 class="job-title">${job.title}</h3>
-                        <span class="job-status status-${job.status === 'Active' ? 'active' : 'closed'}">
-                            ${job.status}
-                        </span>
-                    </div>
+            const jobsHTML = jobs.map(job => {
+                const appStatus = appliedJobs.get(job._id);
+                const hasApplied = appStatus?.hasApplied || false;
+                const applicationStatus = appStatus?.status || '';
+                
+                // Generate status badge color based on application status
+                let statusBadgeHTML = '';
+                if (hasApplied) {
+                    let badgeColor = '';
+                    let statusText = '';
                     
-                    <div class="job-meta">
-                        <div class="meta-item">
-                            <i class="bi bi-geo-alt meta-icon"></i>
-                            ${job.location}
+                    switch(applicationStatus) {
+                        case 'APPLIED':
+                            badgeColor = 'badge-info';
+                            statusText = '⏳ Application Pending';
+                            break;
+                        case 'REVIEWED':
+                            badgeColor = 'badge-warning';
+                            statusText = '👀 Under Review';
+                            break;
+                        case 'SHORTLISTED':
+                            badgeColor = 'badge-success';
+                            statusText = '⭐ Shortlisted';
+                            break;
+                        case 'HIRED':
+                            badgeColor = 'badge-primary';
+                            statusText = '🎉 Hired';
+                            break;
+                        case 'REJECTED':
+                            badgeColor = 'badge-danger';
+                            statusText = '❌ Rejected';
+                            break;
+                        default:
+                            badgeColor = 'badge-secondary';
+                            statusText = applicationStatus;
+                    }
+                    
+                    statusBadgeHTML = `<span class="badge ${badgeColor} ms-2">${statusText}</span>`;
+                }
+                
+                return `
+                    <div class="job-card">
+                        <div class="job-header">
+                            <h3 class="job-title">${escapeHtml(job.title)}</h3>
+                            <span class="job-status status-${job.status === 'Active' ? 'active' : 'closed'}">
+                                ${job.status}
+                            </span>
                         </div>
-                        <div class="meta-item">
-                            <i class="bi bi-briefcase meta-icon"></i>
-                            ${job.jobType}
+                        
+                        <div class="job-meta">
+                            <div class="meta-item">
+                                <i class="bi bi-geo-alt meta-icon"></i>
+                                ${escapeHtml(job.location)}
+                            </div>
+                            <div class="meta-item">
+                                <i class="bi bi-briefcase meta-icon"></i>
+                                ${escapeHtml(job.jobType)}
+                            </div>
+                            <div class="meta-item">
+                                <i class="bi bi-calendar meta-icon"></i>
+                                Posted ${new Date(job.createdAt).toLocaleDateString()}
+                            </div>
                         </div>
-                        <div class="meta-item">
-                            <i class="bi bi-calendar meta-icon"></i>
-                            Posted ${new Date(job.createdAt).toLocaleDateString()}
+                        
+                        <p class="job-description">
+                            ${escapeHtml(job.description.substring(0, 200))}...
+                        </p>
+                        
+                        <div class="job-skills">
+                            ${job.skills.map(skill => `<span class="skill-badge">${escapeHtml(skill)}</span>`).join('')}
+                        </div>
+                        
+                        <div class="job-footer">
+                            <div class="salary-badge">
+                                <i class="bi bi-currency-rupee"></i> ${escapeHtml(job.salary || 'Not specified')}
+                            </div>
+                            <div class="job-actions">
+                                <button class="btn-view btn-view-details" data-job-id="${job._id}">
+                                    <i class="bi bi-eye"></i> View Details
+                                </button>
+                                ${hasApplied ? `
+                                    <button class="btn-apply" style="background: #6c757d; cursor: not-allowed;" disabled title="Already applied">
+                                        <i class="bi bi-check-circle"></i> Already Applied
+                                    </button>
+                                    ${statusBadgeHTML}
+                                ` : `
+                                    <button class="btn-apply btn-apply-job" data-job-id="${job._id}" data-job-title="${escapeHtml(job.title)}" id="applyBtn-${job._id}">
+                                        <i class="bi bi-check-circle"></i> Apply
+                                    </button>
+                                `}
+                            </div>
                         </div>
                     </div>
-                    
-                    <p class="job-description">
-                        ${job.description.substring(0, 200)}...
-                    </p>
-                    
-                    <div class="job-skills">
-                        ${job.skills.map(skill => `<span class="skill-badge">${skill}</span>`).join('')}
-                    </div>
-                    
-                    <div class="job-footer">
-                        <div class="salary-badge">
-                            <i class="bi bi-currency-rupee"></i> ${job.salary || 'Not specified'}
-                        </div>
-                        <div class="job-actions">
-                            <button class="btn-view" onclick="viewJobDetails('${job._id}')">
-                                <i class="bi bi-eye"></i> View Details
-                            </button>
-                            <button class="btn-apply" onclick="openApplyModal('${job._id}')" id="applyBtn-${job._id}">
-                                <i class="bi bi-check-circle"></i> Apply
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             container.innerHTML = jobsHTML;
             
@@ -562,52 +659,145 @@
                     btn.style.display = 'none';
                 });
             }
+
+            // Attach event listeners to dynamically created buttons
+            attachJobListeners();
         }
 
-        // View full job details in modal
+        /**
+         * Attach event listeners to dynamically created job buttons
+         * Uses event delegation for better performance and maintainability
+         */
+        function attachJobListeners() {
+            // View Details button listeners
+            document.querySelectorAll('.btn-view-details').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const jobId = this.getAttribute('data-job-id');
+                    console.log('View Details clicked for jobId:', jobId);
+                    viewJobDetails(jobId);
+                });
+            });
+
+            // Apply job button listeners
+            document.querySelectorAll('.btn-apply-job').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const jobId = this.getAttribute('data-job-id');
+                    const jobTitle = this.getAttribute('data-job-title');
+                    console.log('Apply clicked for jobId:', jobId, 'title:', jobTitle);
+                    openApplyModal(jobId, jobTitle);
+                });
+            });
+        }
+
+        /**
+         * View full job details in modal
+         * Fetches complete job information and displays in modal
+         */
         async function viewJobDetails(jobId) {
             try {
+                // Validate jobId
+                if (!jobId || jobId.trim() === '') {
+                    console.error('❌ Invalid job ID:', jobId);
+                    alert('Invalid job ID. Please try again.');
+                    return;
+                }
+
+                console.log('📌 Fetching job details for ID:', jobId);
+
                 const response = await fetch(`/jobs/${jobId}`);
+                
+                if (!response.ok) {
+                    console.error('❌ Failed to fetch job. Status:', response.status);
+                    throw new Error(`Failed to load job (Error: ${response.status})`);
+                }
+                
                 const job = await response.json();
+                console.log('✅ Job details loaded:', job);
+                
+                // Make sure we have a valid job object
+                if (!job || !job._id) {
+                    throw new Error('Invalid job data received');
+                }
 
                 currentJobId = jobId;
 
-                // Populate modal
-                document.getElementById('jobTitle').textContent = job.title;
-                document.getElementById('jobDetailsContent').innerHTML = `
+                // Populate modal with job details
+                const jobTitle = document.getElementById('jobTitle');
+                const jobDetailsContent = document.getElementById('jobDetailsContent');
+
+                if (!jobTitle || !jobDetailsContent) {
+                    console.error('❌ Modal elements not found in DOM');
+                    throw new Error('Job details modal not found');
+                }
+
+                jobTitle.textContent = escapeHtml(job.title || 'Job Title');
+                jobDetailsContent.innerHTML = `
                     <div class="job-details">
-                        <h6><i class="bi bi-geo-alt"></i> Location: ${job.location}</h6>
-                        <h6><i class="bi bi-briefcase"></i> Job Type: ${job.jobType}</h6>
-                        <h6><i class="bi bi-cash"></i> Salary: ${job.salary || 'Not specified'}</h6>
-                        
-                        <h5 class="mt-3">About this job</h5>
-                        <p>${job.description}</p>
-                        
-                        <h5>Required Skills</h5>
-                        <div class="mb-3">
-                            ${job.skills.map(skill => `<span class="badge bg-primary me-2">${skill}</span>`).join('')}
+                        <div style="margin-bottom: 20px;">
+                            <h6><i class="bi bi-geo-alt"></i> <strong>Location:</strong></h6>
+                            <p>${escapeHtml(job.location || 'Not specified')}</p>
                         </div>
                         
-                        <h5>Job Type</h5>
-                        <p>${job.jobType}</p>
+                        <div style="margin-bottom: 20px;">
+                            <h6><i class="bi bi-briefcase"></i> <strong>Job Type:</strong></h6>
+                            <p>${escapeHtml(job.jobType || 'Not specified')}</p>
+                        </div>
                         
-                        <small class="text-muted">Applications: ${job.applicationCount || 0} | Posted on ${new Date(job.createdAt).toLocaleDateString()}</small>
+                        <div style="margin-bottom: 20px;">
+                            <h6><i class="bi bi-cash-coin"></i> <strong>Salary:</strong></h6>
+                            <p>${escapeHtml(job.salary || 'Not specified')}</p>
+                        </div>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <h6>About this job</h6>
+                            <p style="line-height: 1.6;">${escapeHtml(job.description || 'No description provided')}</p>
+                        </div>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <h6>Required Skills</h6>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                ${(job.skills || []).map(skill => `<span class="badge bg-primary">${escapeHtml(skill)}</span>`).join('')}
+                            </div>
+                        </div>
+                        
+                        <small class="text-muted" style="display: block; margin-top: 20px;">
+                            Applications: <strong>${job.applicationCount || 0}</strong> | Posted: <strong>${new Date(job.createdAt).toLocaleDateString()}</strong>
+                        </small>
                     </div>
                 `;
 
                 // Show modal
+                console.log('🔄 Opening modal for job:', job.title);
                 const modal = new bootstrap.Modal(document.getElementById('jobDetailsModal'));
+                if (!modal) {
+                    throw new Error('Failed to create Bootstrap modal');
+                }
                 modal.show();
+                console.log('✅ Modal opened successfully');
 
             } catch (error) {
-                console.error('Error loading job details:', error);
-                alert('Failed to load job details. Please try again.');
+                console.error('❌ Error loading job details:', error);
+                alert('Failed to load job details.\n\n' + error.message + '\n\nPlease try again later.');
             }
         }
 
-        // Open apply modal
-        function openApplyModal(jobId) {
+        /**
+         * Open apply modal with proper validation
+         * Checks user role, application status, and shows confirmation
+         */
+        function openApplyModal(jobId, jobTitle) {
             try {
+                // Validate inputs
+                if (!jobId || jobId.trim() === '' || !jobTitle || jobTitle.trim() === '') {
+                    console.error('❌ Invalid job information:', { jobId, jobTitle });
+                    alert('Invalid job information. Please try again.');
+                    return;
+                }
+
+                console.log('📌 Opening apply modal for job:', jobId, jobTitle);
+
                 <% if (!locals.user) { %>
                     alert('Please login to apply for jobs');
                     window.location.href = '/user/signin';
@@ -619,33 +809,57 @@
                     return;
                 <% } %>
 
-                // Get job title
-                const jobTitle = document.querySelector(`[onclick*="${jobId}"]`)?.closest('.job-card')?.querySelector('.card-title')?.textContent || 'Job';
+                // Check if already applied
+                const appStatus = appliedJobs.get(jobId);
+                if (appStatus?.hasApplied) {
+                    console.warn('⚠️ User already applied to this job:', jobId);
+                    alert('You have already applied to this job. Please wait for the recruiter to review your application.');
+                    return;
+                }
                 
                 currentJobId = jobId;
-                document.getElementById('applyJobTitle').textContent = jobTitle;
+                
+                // Get modal elements
+                const applyJobTitleEl = document.getElementById('applyJobTitle');
+                const applyForm = document.getElementById('applyForm');
+                
+                if (!applyJobTitleEl || !applyForm) {
+                    console.error('❌ Apply modal elements not found');
+                    throw new Error('Apply form elements not found');
+                }
+
+                applyJobTitleEl.textContent = escapeHtml(jobTitle);
                 
                 // Set form action
-                document.getElementById('applyForm').action = `/applications/${jobId}/apply`;
+                applyForm.action = `/applications/${jobId}/apply`;
                 
                 // Reset form
-                document.getElementById('applyForm').reset();
+                applyForm.reset();
 
                 // Show modal
+                console.log('🔄 Opening apply form modal');
                 const modal = new bootstrap.Modal(document.getElementById('applyModal'));
+                if (!modal) {
+                    throw new Error('Failed to create Bootstrap modal');
+                }
                 modal.show();
+                console.log('✅ Apply modal opened successfully');
 
             } catch (error) {
-                console.error('Error opening apply modal:', error);
-                alert('An error occurred. Please try again.');
+                console.error('❌ Error opening apply modal:', error);
+                alert('An error occurred. ' + error.message);
             }
         }
 
-        // Handle apply form submission with validation
-        document.getElementById('applyForm').addEventListener('submit', function(e) {
+        /**
+         * Handle apply form submission with proper validation
+         * Prevents duplicate submissions and validates data
+         */
+        document.getElementById('applyForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const resumeUrl = document.getElementById('resumeUrl').value.trim();
+            const coverLetter = document.getElementById('coverLetter').value.trim();
             
             if (!resumeUrl) {
                 alert('Please enter a resume URL');
@@ -657,15 +871,67 @@
                 return;
             }
             
-            // Submit the form
-            this.submit();
+            // Prevent multiple submissions
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+            
+            try {
+                console.log('Submitting application to:', this.action);
+                
+                // Use fetch for better error handling
+                const response = await fetch(this.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        resumeUrl: resumeUrl,
+                        coverLetter: coverLetter
+                    })
+                });
+                
+                const result = await response.json();
+                console.log('Server response:', response.status, result);
+                
+                if (!response.ok) {
+                    // Handle specific error cases
+                    if (response.status === 409) {
+                        alert('You have already applied to this job. Please wait for the recruiter to review your application.');
+                    } else {
+                        alert(result.error || 'Failed to submit application');
+                    }
+                } else {
+                    // Success
+                    alert('Application submitted successfully!\\n\\nCheck your applications page for status updates.');
+                    
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('applyModal')).hide();
+                    
+                    // Update UI immediately
+                    appliedJobs.set(currentJobId, {
+                        hasApplied: true,
+                        status: 'APPLIED'
+                    });
+                    
+                    // Reload and refresh UI
+                    loadJobs();
+                }
+            } catch (error) {
+                console.error('Error submitting application:', error);
+                alert('Failed to submit application. ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
         });
 
         // Display pagination buttons
         function displayPagination(pagination) {
             const container = document.getElementById('pagination');
             
-            if (!pagination || pagination.totalPages <= 1) {
+            if (!pagination || !pagination.hasNextPage && pagination.currentPage === 1) {
                 container.innerHTML = '';
                 return;
             }
@@ -675,23 +941,25 @@
             // Previous button
             paginationHTML += `
                 <li class="page-item ${!pagination.hasPrevPage ? 'disabled' : ''}">
-                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Previous</a>
+                    <a class="page-link" href="#" onclick="changePage(${pagination.currentPage - 1}); return false;">
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </a>
                 </li>
             `;
 
-            // Page numbers
-            for (let i = 1; i <= pagination.totalPages; i++) {
-                paginationHTML += `
-                    <li class="page-item ${i === currentPage ? 'active' : ''}">
-                        <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
-                    </li>
-                `;
-            }
+            // Show current page info
+            paginationHTML += `
+                <li class="page-item disabled">
+                    <span class="page-link">Page ${pagination.currentPage}</span>
+                </li>
+            `;
 
             // Next button
             paginationHTML += `
                 <li class="page-item ${!pagination.hasNextPage ? 'disabled' : ''}">
-                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Next</a>
+                    <a class="page-link" href="#" onclick="changePage(${pagination.currentPage + 1}); return false;">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </a>
                 </li>
             `;
 
@@ -700,6 +968,7 @@
 
         // Change page function
         function changePage(page) {
+            if (page < 1) return;
             currentPage = page;
             loadJobs();
             window.scrollTo({ top: 0, behavior: 'smooth' });
