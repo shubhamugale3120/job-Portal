@@ -478,7 +478,8 @@
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
-                const applications = await response.json();
+                const result = await response.json();
+                const applications = result.data || result; // Support new format
 
                 if (!Array.isArray(applications) || applications.length === 0) {
                     document.getElementById('totalApplications').textContent = '0';
@@ -764,7 +765,8 @@
                 const response = await fetch(`/jobs/${jobId}`);
                 if (!response.ok) throw new Error('Failed to load job');
                 
-                const job = await response.json();
+                const result = await response.json();
+                const job = result.data || result; // Support new format
 
                 // Populate modal
                 document.getElementById('jobDetailsContent').innerHTML = `
@@ -918,3 +920,7 @@
 
         .recommendation-card button:active {
             transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4) !important;
+            opacity: 0.9;   
+        }
+    </style>

@@ -107,7 +107,8 @@
                     throw new Error('Job not found');
                 }
 
-                const job = await response.json();
+                const result = await response.json();
+                const job = result.data || result; // Support new format
 
                 // Populate form
                 document.getElementById('title').value = job.title;

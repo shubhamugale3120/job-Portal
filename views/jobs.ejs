@@ -713,7 +713,8 @@
                     throw new Error(`Failed to load job (Error: ${response.status})`);
                 }
                 
-                const job = await response.json();
+                const result = await response.json();
+                const job = result.data || result; // Support new format
                 console.log('✅ Job details loaded:', job);
                 
                 // Make sure we have a valid job object

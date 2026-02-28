@@ -126,10 +126,16 @@ async function getMyApplications(req, res) {
             appliedAt: app.appliedAt || app.createdAt
         }));
         
-        return res.json(transformedApplications);
+        return res.json({
+            success: true,
+            data: transformedApplications
+        });
     } catch (err) {
         console.error('Error fetching applications:', err);
-        return res.status(500).json({ error: 'Failed to fetch applications' });
+        return res.status(500).json({ 
+            success: false,
+            error: { code: 'FETCH_ERROR', message: 'Failed to fetch applications' }
+        });
     }
 }
 
@@ -141,9 +147,16 @@ async function getApplicationsForJob(req, res) {
             .sort({ createdAt: -1 })
             .select('studentId jobId resumeUrl coverLetter status appliedAt')
             .lean(); // Use lean() for faster read-only queries
-        return res.json(applications);
+        return res.json({
+            success: true,
+            data: applications
+        });
     } catch (err) {
-        return res.status(500).json({ error: 'Failed to fetch applicants' });
+        console.error('Error fetching applicants:', err);
+        return res.status(500).json({ 
+            success: false,
+            error: { code: 'FETCH_ERROR', message: 'Failed to fetch applicants' }
+        });
     }
 }
 
@@ -151,14 +164,27 @@ async function updateApplicationStatus(req, res) {
     try {
         const application = await Application.findById(req.params.id);
         if (!application) {
-            return res.redirect('/recruiter/dashboard?error=' + encodeURIComponent('Application not found'));
+            return res.status(404).json({
+                success: false,
+                error: { code: 'NOT_FOUND', message: 'Application not found' }
+            });
         }
         application.status = req.body.status || application.status;
         await application.save();
-        // Redirect back to applicants page
-        return res.redirect(`/recruiter/view-applicants/${application.jobId}?success=Application status updated to ${application.status}`);
+        return res.json({
+            success: true,
+            message: `Application status updated to ${application.status}`,
+            data: application
+        });
     } catch (err) {
-        return res.redirect('/recruiter/dashboard?error=' + encodeURIComponent(err.message || 'Failed to update status'));
+        console.error('Update application status error:', err);
+        return res.status(500).json({
+            success: false,
+            error: {
+                code: 'UPDATE_ERROR',
+                message: err.message || 'Failed to update status'
+            }
+        });
     }
 }
 

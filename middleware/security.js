@@ -87,7 +87,7 @@ const corsOptions = {
         : true, // Allow all origins in development
     credentials: true, // Allow cookies to be sent
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Accept'],
     maxAge: 86400, // Cache preflight requests for 24 hours
 };
 

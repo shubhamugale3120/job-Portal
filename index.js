@@ -5,17 +5,16 @@ const userRouter = require('./routes/user');
 const jobRouter = require('./routes/job');
 const applicationRouter = require('./routes/application');
 const profileRouter = require('./routes/profile');
-// AI Recommendation Routes - provides personalized job suggestions to students
-// Why: Increases user engagement and application rates by showing relevant jobs
 const recommendationRouter = require('./routes/recommendations');
+const apiAuthRouter = require('./routes/apiAuth');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const errorHandler = require('./middleware/errorHandler');
+const notFoundHandler = require('./middleware/notFound');
+const requestIdMiddleware = require('./middleware/requestId');
 const { setupSecurity } = require('./middleware/security');
 const {checkforAuthenticationCookie} = require('./middleware/authetication');
 
-// Rate Limiting Middleware - prevents abuse and DoS attacks
-// Why: Protects server from spam, brute force attacks, and excessive API calls
 const { apiLimiter, authLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
@@ -32,10 +31,13 @@ app.set('views', path.join(__dirname, 'views'));
 // Why: Ensures correct IP addresses when behind proxy
 app.set('trust proxy', 1);
 
-// 2. Apply general API rate limiter to ALL routes
-// Why: Prevents DoS attacks and API abuse (100 requests/minute per IP)
+// 2. Apply general API rate limiter to API routes only
+// Why: Prevents DoS attacks and API abuse without throttling page renders
 // Applied before other middleware to block attackers early
-app.use(apiLimiter);
+app.use('/api', apiLimiter);
+
+// 2.5 Request correlation ID (for tracing logs/errors across layers)
+app.use(requestIdMiddleware);
 
 // 3. Body parsers (after rate limiting, before routes)
 app.use(express.urlencoded({ extended: false }));
@@ -58,6 +60,10 @@ mongoose.connect(MONGODB_URI).then(()=>{
 // Middleware to pass query parameters as locals for flash messages
 // This must be AFTER body/cookie parsing but BEFORE routes
 app.use((req, res, next) => {
+    if (process.env.NODE_ENV !== 'production') {
+        console.log(`[${req.id}] ${req.method} ${req.originalUrl}`);
+    }
+
     // Only read query parameters, don't modify req.query
     if (req.query && req.query.success) {
         res.locals.success = req.query.success;
@@ -82,11 +88,10 @@ app.get('/signup',(req,res)=>{
     res.render('signup');
 });
 
-// ===== AUTHENTICATION ROUTES WITH STRICT RATE LIMITING =====
-// Why stricter limits: Prevent brute force password attacks
-// Limit: 5 attempts per 15 minutes per IP
+// ===== API AUTHENTICATION ROUTES (JSON-based for React SPA) =====
+app.use(apiAuthRouter);
 
-// Apply auth limiter to signin POST route
+// ===== TRADITIONAL AUTH ROUTES (EJS-based for backward compat) =====
 app.post('/user/signin', authLimiter, (req, res, next) => {
     // Authent limiter allows only 5 attempts per 15 minutes
     // Why: Prevents password guessing attacks
@@ -98,8 +103,6 @@ app.post('/user/signup', authLimiter, (req, res, next) => {
     // Why also limit signup: Prevents spam account creation
     next();
 });
-
-// ✅ Debug endpoints removed for production security
 
 // ====== VIEW ROUTES FOR FRONTEND PAGES ======
 
@@ -197,7 +200,7 @@ app.get('/profile/edit', (req, res) => {
     }
 });
 
-// ====== API ROUTES ======
+// ====== API ROUTES (PRIMARY - JSON) ======
 const {updateProfile} = require('./controllers/userController');
 app.post('/profile/update', (req, res, next) => {
     if (!req.user) {
@@ -206,40 +209,58 @@ app.post('/profile/update', (req, res, next) => {
     next();
 }, updateProfile);
 
-app.use('/user',userRouter);
-app.use('/jobs', jobRouter);
-app.use('/applications', applicationRouter);
-app.use('/profile', profileRouter);
+app.use('/api/jobs', jobRouter);
+app.use('/api/applications', applicationRouter);
+app.use('/api/profile', profileRouter);
 
 // Register AI recommendation routes
 // Why: Provides /api/recommendations/* endpoints for job suggestions
 // This must be registered after authentication middleware so req.user is available
 app.use(recommendationRouter);
 
+// ====== LEGACY ROUTES (BACKWARD COMPAT FOR EJS PAGES) ======
+app.use('/user',userRouter);
+app.use('/jobs', jobRouter);
+app.use('/applications', applicationRouter);
+app.use('/profile', profileRouter);
+
 // ===== HEALTH CHECK ENDPOINT =====
 // Why: Deployment platforms use this to monitor app status
 // Heroku, AWS, DigitalOcean, etc check /health to ensure app is alive
 app.get('/health', (req, res) => {
+    const startTime = process.hrtime.bigint();
+    const databaseConnected = mongoose.connection.readyState === 1;
+    const responseTimeMs = Number(process.hrtime.bigint() - startTime) / 1_000_000;
+    const status = databaseConnected ? 'ok' : 'degraded';
+
     const healthcheck = {
+        status,
         uptime: process.uptime(),
         message: 'OK',
         timestamp: Date.now(),
-        mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-        environment: process.env.NODE_ENV || 'development'
+        mongodb: databaseConnected ? 'connected' : 'disconnected',
+        environment: process.env.NODE_ENV || 'development',
+        responseTimeMs: Number(responseTimeMs.toFixed(2)),
+        requestId: req.id || null
     };
-    res.status(200).json(healthcheck);
+
+    const statusCode = databaseConnected ? 200 : 503;
+    res.status(statusCode).json(healthcheck);
 });
 
+app.use(notFoundHandler);
 app.use(errorHandler);
 
 app.listen(PORT,()=>{
     const env = process.env.NODE_ENV || 'development';
+    const startupRequestId = 'SERVER-START';
     console.log(`
 ╔════════════════════════════════════════════╗
 ║     🚀 SERVER STARTED SUCCESSFULLY         ║
 ║  Environment: ${env.toUpperCase().padEnd(27)} ║
 ║  Port: ${PORT.toString().padEnd(36)} ║
 ║  PID: ${process.pid.toString().padEnd(37)} ║
+║  RequestId: ${startupRequestId.padEnd(31)} ║
 ╚════════════════════════════════════════════╝
     `);
     if (env === 'development') {

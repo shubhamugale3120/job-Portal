@@ -20,6 +20,13 @@
 
 const rateLimit = require('express-rate-limit');
 
+const isProduction = process.env.NODE_ENV === 'production';
+
+function logRateLimitHit(req, scope) {
+    const requestId = req?.id || 'unknown-request-id';
+    console.warn(`[${requestId}] ⚠️ ${scope} rate limit exceeded from IP: ${req.ip} on ${req.method} ${req.originalUrl}`);
+}
+
 /**
  * General API rate limiter
  * 
@@ -33,8 +40,8 @@ const rateLimit = require('express-rate-limit');
  * Applied to: All API routes
  */
 const apiLimiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute time window
-    max: 100, // Max 100 requests per window
+    windowMs: Number(process.env.API_RATE_LIMIT_WINDOW_MS) || 60 * 1000,
+    max: Number(process.env.API_RATE_LIMIT_MAX) || (isProduction ? 120 : 300),
     message: {
         success: false,
         message: 'Too many requests from this IP. Please try again after 1 minute.',
@@ -44,6 +51,7 @@ const apiLimiter = rateLimit({
     legacyHeaders: false, // Disable `X-RateLimit-*` headers
     // Store in memory by default (use Redis for production with multiple servers)
     handler: (req, res) => {
+        logRateLimitHit(req, 'API');
         res.status(429).json({
             success: false,
             message: 'Too many requests. Please slow down and try again later.',
@@ -65,8 +73,8 @@ const apiLimiter = rateLimit({
  * Applied to: /signin, /signup, /user/signin
  */
 const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minute window
-    max: 5, // Max 5 attempts per window
+    windowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+    max: Number(process.env.AUTH_RATE_LIMIT_MAX) || 5,
     skipSuccessfulRequests: true, // Don't count successful logins
     message: {
         success: false,
@@ -74,8 +82,7 @@ const authLimiter = rateLimit({
         security: 'Your IP has been temporarily blocked due to suspicious activity.'
     },
     handler: (req, res) => {
-        // Log potential security threat
-        console.warn(`⚠️ Rate limit exceeded from IP: ${req.ip} on ${req.path}`);
+        logRateLimitHit(req, 'AUTH');
         
         res.status(429).json({
             success: false,
@@ -99,8 +106,8 @@ const authLimiter = rateLimit({
  * Applied to: POST /jobs/post
  */
 const jobPostLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 10, // Max 10 job posts per hour
+    windowMs: Number(process.env.JOB_POST_RATE_LIMIT_WINDOW_MS) || 60 * 60 * 1000,
+    max: Number(process.env.JOB_POST_RATE_LIMIT_MAX) || 10,
     message: {
         success: false,
         message: 'You have reached the hourly limit for job postings. Please try again later.',
@@ -108,6 +115,7 @@ const jobPostLimiter = rateLimit({
     },
     skipFailedRequests: true, // Don't count failed posts
     handler: (req, res) => {
+        logRateLimitHit(req, 'JOB_POST');
         res.status(429).json({
             success: false,
             message: 'Job posting limit reached. You can post up to 10 jobs per hour.',
@@ -129,14 +137,15 @@ const jobPostLimiter = rateLimit({
  * Applied to: POST /applications/apply
  */
 const applicationLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 20, // Max 20 applications per hour
+    windowMs: Number(process.env.APPLICATION_RATE_LIMIT_WINDOW_MS) || 60 * 60 * 1000,
+    max: Number(process.env.APPLICATION_RATE_LIMIT_MAX) || 20,
     message: {
         success: false,
         message: 'You have reached the hourly limit for job applications.',
         tip: 'Take time to customize each application for better results.'
     },
     handler: (req, res) => {
+        logRateLimitHit(req, 'APPLICATION');
         res.status(429).json({
             success: false,
             message: 'Application limit reached. You can apply to up to 20 jobs per hour.',
@@ -159,13 +168,14 @@ const applicationLimiter = rateLimit({
  * Applied to: POST /profile/upload, POST /applications/upload
  */
 const uploadLimiter = rateLimit({
-    windowMs: 10 * 60 * 1000, // 10 minutes
-    max: 10, // Max 10 uploads per 10 minutes
+    windowMs: Number(process.env.UPLOAD_RATE_LIMIT_WINDOW_MS) || 10 * 60 * 1000,
+    max: Number(process.env.UPLOAD_RATE_LIMIT_MAX) || 10,
     message: {
         success: false,
         message: 'Upload limit reached. Please try again in 10 minutes.'
     },
     handler: (req, res) => {
+        logRateLimitHit(req, 'UPLOAD');
         res.status(429).json({
             success: false,
             message: 'Too many file uploads. Please wait 10 minutes before uploading again.'

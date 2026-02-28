@@ -9,14 +9,27 @@ async function getMyProfile(req, res) {
         } else if (req.user.role === 'recruiter') {
             profile = await RecruiterProfile.findOne({ userId: req.user._id });
         } else {
-            return res.status(403).json({ error: 'Unauthorized role' });
+            return res.status(403).json({ 
+                success: false,
+                error: { code: 'FORBIDDEN', message: 'Unauthorized role' }
+            });
         }
         if (!profile) {
-            return res.status(404).json({ error: 'Profile not found' });
+            return res.status(404).json({ 
+                success: false,
+                error: { code: 'NOT_FOUND', message: 'Profile not found' }
+            });
         }
-        res.json(profile);
+        res.json({
+            success: true,
+            data: profile
+        });
     } catch (error) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Get profile error:', error);
+        res.status(500).json({ 
+            success: false,
+            error: { code: 'SERVER_ERROR', message: 'Server error' }
+        });
     }
 }
 
@@ -52,11 +65,25 @@ async function updateMyProfile(req, res) {
                 { new: true, upsert: true }
             );
         } else {
-            return res.status(403).json({ error: 'Unauthorized role' });
+            return res.status(403).json({ 
+                success: false,
+                error: { code: 'FORBIDDEN', message: 'Unauthorized role' }
+            });
         }
-        res.json(profile);
+        res.json({
+            success: true,
+            message: 'Profile updated successfully',
+            data: profile
+        });
     } catch (error) {
-        res.status(500).json({ error: error.message || 'Server error' });
+        console.error('Update profile error:', error);
+        res.status(500).json({ 
+            success: false,
+            error: {
+                code: 'UPDATE_ERROR',
+                message: error.message || 'Server error'
+            }
+        });
     }
 }
 

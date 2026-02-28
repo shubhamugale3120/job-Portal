@@ -1,6 +1,7 @@
 const Job = require('../models/job');
 const Application = require('../models/Application');
 
+
 // Get recruiter's posted jobs (API endpoint for dashboard)
 async function getMyJobs(req, res) {
     try {
@@ -132,7 +133,10 @@ async function listJobs(req, res) {
             }
         });
     } catch (err) {
-        return res.status(500).json({ error: 'Failed to fetch jobs' });
+        return res.status(500).json({ 
+            success: false,
+            error: { code: 'FETCH_ERROR', message: 'Failed to fetch jobs' }
+        });
     }
 }
 
@@ -140,11 +144,20 @@ async function getJobById(req, res) {
     try {
         const job = await Job.findById(req.params.id).lean();
         if (!job) {
-            return res.status(404).json({ error: 'Job not found' });
+            return res.status(404).json({ 
+                success: false,
+                error: { code: 'NOT_FOUND', message: 'Job not found' }
+            });
         }
-        return res.json(job);
+        return res.json({
+            success: true,
+            data: job
+        });
     } catch (err) {
-        return res.status(500).json({ error: 'Failed to fetch job' });
+        return res.status(500).json({ 
+            success: false,
+            error: { code: 'FETCH_ERROR', message: 'Failed to fetch job' }
+        });
     }
 }
 
@@ -154,9 +167,20 @@ async function createJob(req, res) {
             ...req.body,
             postedBy: req.user._id, // Tie job to the recruiter creating it
         });
-        return res.redirect('/recruiter/dashboard?success=Job posted successfully');
+        return res.status(201).json({
+            success: true,
+            message: 'Job posted successfully',
+            data: job
+        });
     } catch (err) {
-        return res.redirect('/recruiter/post-job?error=' + encodeURIComponent(err.message || 'Failed to create job'));
+        console.error('Create job error:', err);
+        return res.status(500).json({
+            success: false,
+            error: {
+                code: 'CREATE_ERROR',
+                message: err.message || 'Failed to create job'
+            }
+        });
     }
 }
 
@@ -164,19 +188,36 @@ async function updateJob(req, res) {
     try {
         const job = await Job.findById(req.params.id);
         if (!job) {
-            return res.redirect('/recruiter/dashboard?error=' + encodeURIComponent('Job not found'));
+            return res.status(404).json({
+                success: false,
+                error: { code: 'NOT_FOUND', message: 'Job not found' }
+            });
         }
 
         // OWNERSHIP CHECK - Only owner or admin can edit
         if (job.postedBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-            return res.redirect('/recruiter/dashboard?error=' + encodeURIComponent('You can only edit your own jobs'));
+            return res.status(403).json({
+                success: false,
+                error: { code: 'FORBIDDEN', message: 'You can only edit your own jobs' }
+            });
         }
 
         Object.assign(job, req.body);
         await job.save();
-        return res.redirect('/recruiter/dashboard?success=Job updated successfully');
+        return res.json({
+            success: true,
+            message: 'Job updated successfully',
+            data: job
+        });
     } catch (err) {
-        return res.redirect(`/recruiter/edit-job/${req.params.id}?error=` + encodeURIComponent(err.message || 'Failed to update job'));
+        console.error('Update job error:', err);
+        return res.status(500).json({
+            success: false,
+            error: {
+                code: 'UPDATE_ERROR',
+                message: err.message || 'Failed to update job'
+            }
+        });
     }
 }
 
@@ -184,17 +225,33 @@ async function deleteJob(req, res) {
     try {
         const job = await Job.findById(req.params.id);
         if (!job) {
-            return res.redirect('/recruiter/dashboard?error=' + encodeURIComponent('Job not found'));
+            return res.status(404).json({
+                success: false,
+                error: { code: 'NOT_FOUND', message: 'Job not found' }
+            });
         }
 
         // OWNERSHIP CHECK - Only owner or admin can delete
         if (job.postedBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-            return res.redirect('/recruiter/dashboard?error=' + encodeURIComponent('You can only delete your own jobs'));
+            return res.status(403).json({
+                success: false,
+                error: { code: 'FORBIDDEN', message: 'You can only delete your own jobs' }
+            });
         }
         await job.deleteOne();
-        return res.redirect('/recruiter/dashboard?success=Job deleted successfully');
+        return res.json({
+            success: true,
+            message: 'Job deleted successfully'
+        });
     } catch (err) {
-        return res.redirect('/recruiter/dashboard?error=' + encodeURIComponent('Failed to delete job'));
+        console.error('Delete job error:', err);
+        return res.status(500).json({
+            success: false,
+            error: {
+                code: 'DELETE_ERROR',
+                message: 'Failed to delete job'
+            }
+        });
     }
 }
 

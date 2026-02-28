@@ -53,7 +53,8 @@
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
-                const applications = await response.json();
+                const result = await response.json();
+                const applications = result.data || result; // Support new format
 
                 if (!Array.isArray(applications) || applications.length === 0) {
                     document.getElementById('applicationsContainer').innerHTML = `

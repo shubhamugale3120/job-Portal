@@ -72,7 +72,8 @@
         async function loadJobDetails() {
             try {
                 const response = await fetch(`/jobs/${jobId}`);
-                const job = await response.json();
+                const result = await response.json();
+                const job = result.data || result; // Support both old and new format
 
                 document.getElementById('jobDetailsCard').innerHTML = `
                     <div class="card-body">
@@ -98,7 +99,8 @@
         async function loadApplicants() {
             try {
                 const response = await fetch(`/applications/job/${jobId}`);
-                const applications = await response.json();
+                const result = await response.json();
+                const applications = result.data || result; // Support both old and new format
 
                 document.getElementById('applicantCount').textContent = applications.length;
 
