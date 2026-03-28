@@ -12,6 +12,7 @@ import RecuiterDashboardPage from './pages/recuiter/RecuiterDashboardPage';
 import MyJobsPage from './pages/recuiter/MyJobsPage';
 import PostJobPage from './pages/recuiter/PostJobPage';
 import ApplicantsPage from './pages/recuiter/ApplicantsPage';
+import ForbiddenPage from './pages/common/ForbiddenPage';
 
 function App() {
    return (
@@ -80,7 +81,7 @@ function App() {
                }
             />
 
-            <Route path="/forbidden" element={<div>403 Forbidden</div>} />
+            <Route path="/forbidden" element={<ForbiddenPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
          </Routes>
          </main>

@@ -67,26 +67,39 @@ const MyJobsPage = () => {
 	return (
 		<section className="jobs-page">
 			<div className="jobs-container">
-				<h1 className="jobs-title">My Jobs</h1>
+				<header className="jobs-browse-header">
+					<h1 className="jobs-title">My Jobs</h1>
+					<p className="jobs-subtitle">Manage your listings, track applications, and update hiring status.</p>
+				</header>
 				{jobs.length === 0 && <EmptyState message="No jobs posted yet." />}
 
 				{jobs.map((job) => {
 					const jobId = job._id || job.id;
+					const postedOn = job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently';
+					const isClosed = String(job.status || '').toLowerCase() !== 'active';
 					return (
 						<article className="job-card" key={jobId}>
-							<h3 className="job-card-title">{job.title}</h3>
-							<p className="job-card-meta">{job.location || 'Location not specified'}</p>
-							<p className="job-card-skills">Status: {job.status || 'Active'}</p>
-							<p className="job-card-type">Applications: {job.applicationCount || 0}</p>
+							<div className="job-header">
+								<h3 className="job-card-title">{job.title}</h3>
+								<span className={`job-status ${isClosed ? 'status-closed' : 'status-active'}`}>
+									{job.status || 'Active'}
+								</span>
+							</div>
+
+							<div className="job-meta">
+								<p className="meta-item">{job.location || 'Location not specified'}</p>
+								<p className="meta-item">Posted {postedOn}</p>
+								<p className="meta-item">Applications: {job.applicationCount || 0}</p>
+							</div>
 
 							<div className="job-card-actions">
-								<button type="button" onClick={() => navigate(`/recruiter/jobs/${jobId}/applicants`)}>
+								<button className="btn-view" type="button" onClick={() => navigate(`/recruiter/jobs/${jobId}/applicants`)}>
 									View Applicants
 								</button>
-								<button type="button" onClick={() => handleToggleStatus(job)}>
+								<button className="btn-apply" type="button" onClick={() => handleToggleStatus(job)}>
 									{job.status === 'Active' ? 'Close Job' : 'Reopen Job'}
 								</button>
-								<button type="button" onClick={() => handleDelete(jobId)}>
+								<button className="btn-danger-soft" type="button" onClick={() => handleDelete(jobId)}>
 									Delete
 								</button>
 							</div>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "../../hooks/useAuth";
 import { login as loginRequest } from '../../services/authService';
@@ -43,22 +44,54 @@ const LoginPage = () => {
 
     return (
         <section className="auth-page">
-            <div className="auth-card">
-            <h2>Login</h2>
-            <form className="auth-form" onSubmit={handleSubmit}>
-                <div className="auth-field">
-                    <label>Email:</label>
-                    <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+            <div className="auth-shell auth-shell-login">
+                <aside className="auth-brand-panel">
+                    <div className="auth-brand-chip">JOB PORTAL</div>
+                    <h2>Welcome Back</h2>
+                    <p>Sign in to continue managing applications, jobs, and recommendations from your dashboard.</p>
+                </aside>
+
+                <div className="auth-card auth-card-branded">
+                    <div className="auth-card-header">
+                        <h2>Sign In</h2>
+                        <p>Access your account securely</p>
+                    </div>
+
+                    <form className="auth-form" onSubmit={handleSubmit}>
+                        <div className="auth-field auth-field-stacked">
+                            <label htmlFor="login-email">Email Address</label>
+                            <input
+                                id="login-email"
+                                type="email"
+                                placeholder="Enter your email"
+                                value={email}
+                                onChange={(event) => setEmail(event.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="auth-field auth-field-stacked">
+                            <label htmlFor="login-password">Password</label>
+                            <input
+                                id="login-password"
+                                type="password"
+                                placeholder="Enter your password"
+                                value={password}
+                                onChange={(event) => setPassword(event.target.value)}
+                                required
+                            />
+                        </div>
+
+                        {error && <p className="auth-error">{error}</p>}
+
+                        <button className="auth-submit" type="submit" disabled={submitting}>
+                            {submitting ? 'Signing in...' : 'Sign In'}
+                        </button>
+
+                        <p className="auth-alt-link">
+                            New here? <Link to="/register">Create an account</Link>
+                        </p>
+                    </form>
                 </div>
-                <div className="auth-field">
-                    <label>Password:</label>
-                    <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
-                </div>
-                {error && <p className="auth-error">{error}</p>}
-                <button className="auth-submit" type="submit" disabled={submitting}>
-                    {submitting ? 'Signing in...' : 'Login'}
-                </button>
-            </form>
             </div>
         </section>
     );

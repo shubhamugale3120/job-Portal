@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
@@ -56,13 +57,36 @@ const RecuiterDashboardPage = () => {
 	return (
 		<section className="jobs-page">
 			<div className="jobs-container">
-				<h1 className="jobs-title">Recruiter Dashboard</h1>
+				<header className="jobs-browse-header">
+					<h1 className="jobs-title">Recruiter Dashboard</h1>
+					<p className="jobs-subtitle">Track your listings, monitor applications, and take action quickly.</p>
+				</header>
 
-				<article className="job-card">
-					<h3 className="job-card-title">Total Jobs: {stats.totalJobs}</h3>
-					<p className="job-card-meta">Active Jobs: {stats.activeJobs}</p>
-					<p className="job-card-skills">Applications: {stats.totalApplications}</p>
-					<p className="job-card-type">Pending Review: {stats.pendingApplications}</p>
+				<section className="recruiter-stats-grid">
+					<article className="recruiter-stat-card">
+						<p>Total Jobs</p>
+						<h3>{stats.totalJobs}</h3>
+					</article>
+					<article className="recruiter-stat-card">
+						<p>Active Jobs</p>
+						<h3>{stats.activeJobs}</h3>
+					</article>
+					<article className="recruiter-stat-card">
+						<p>Total Applications</p>
+						<h3>{stats.totalApplications}</h3>
+					</article>
+					<article className="recruiter-stat-card">
+						<p>Pending Review</p>
+						<h3>{stats.pendingApplications}</h3>
+					</article>
+				</section>
+
+				<article className="job-card recruiter-quick-actions">
+					<h2 className="job-card-title">Quick Actions</h2>
+					<div className="job-card-actions">
+						<Link className="btn-view" to="/recruiter/post-job">Post New Job</Link>
+						<Link className="btn-apply" to="/recruiter/my-jobs">Manage My Jobs</Link>
+					</div>
 				</article>
 			</div>
 		</section>

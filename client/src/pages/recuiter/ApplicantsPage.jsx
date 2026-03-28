@@ -35,9 +35,8 @@ const ApplicantsPage = () => {
 
   const updateStatus = async (applicationId, status) => {
     try {
-      const response = await updateApplicationStatus(applicationId, status);
-      const updated = response?.data;
-      setApplications((prev) => prev.map((app) => (app._id === applicationId ? { ...app, ...updated, status } : app)));
+      await updateApplicationStatus(applicationId, status);
+      setApplications((prev) => prev.map((app) => (app._id === applicationId ? { ...app, status } : app)));
     } catch (err) {
       window.alert(err?.response?.data?.error?.message || 'Failed to update status');
     }
@@ -54,21 +53,30 @@ const ApplicantsPage = () => {
   return (
     <section className="jobs-page">
       <div className="jobs-container">
-        <h1 className="jobs-title">Applicants</h1>
+        <header className="jobs-browse-header">
+          <h1 className="jobs-title">Applicants</h1>
+          <p className="jobs-subtitle">Review applications and move candidates through your hiring pipeline.</p>
+        </header>
 
         {applications.length === 0 && <EmptyState message="No applicants yet for this job." />}
 
         {applications.map((app) => (
           <article className="job-card" key={app._id}>
-            <h3 className="job-card-title">{app?.studentId?.name || 'Unknown Candidate'}</h3>
-            <p className="job-card-meta">{app?.studentId?.email || 'No email'}</p>
-            <p className="job-card-skills">Status: {(app.status || 'APPLIED').toUpperCase()}</p>
-            <p className="job-card-type">Applied: {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : 'N/A'}</p>
+            <div className="job-header">
+              <h3 className="job-card-title">{app?.studentId?.name || 'Unknown Candidate'}</h3>
+              <span className="job-status status-active">{(app.status || 'APPLIED').toUpperCase()}</span>
+            </div>
+
+            <div className="job-meta">
+              <p className="meta-item">{app?.studentId?.email || 'No email available'}</p>
+              <p className="meta-item">Applied: {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : 'N/A'}</p>
+              <p className="meta-item">Job: {app?.jobId?.title || 'Untitled role'}</p>
+            </div>
 
             <div className="job-card-actions">
-              <button type="button" onClick={() => updateStatus(app._id, 'REVIEWED')}>Review</button>
-              <button type="button" onClick={() => updateStatus(app._id, 'HIRED')}>Hire</button>
-              <button type="button" onClick={() => updateStatus(app._id, 'REJECTED')}>Reject</button>
+              <button className="btn-view" type="button" onClick={() => updateStatus(app._id, 'REVIEWED')}>Review</button>
+              <button className="btn-apply" type="button" onClick={() => updateStatus(app._id, 'HIRED')}>Hire</button>
+              <button className="btn-danger-soft" type="button" onClick={() => updateStatus(app._id, 'REJECTED')}>Reject</button>
             </div>
           </article>
         ))}

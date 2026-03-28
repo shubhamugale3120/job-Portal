@@ -15,8 +15,8 @@ export function Pagination({ query, updateQuery, pagination }) {
 
     return (
         <div className="jobs-pagination">
-            <button className="jobs-page-btn" type="button" onClick={goPrev} disabled={!pagination?.hasPrevPage && currentPage <= 1}>
-                Prev
+            <button className="jobs-page-btn" type="button" onClick={goPrev} disabled={!pagination?.hasPrevPage}>
+                Previous
             </button>
             <span className="jobs-page-label">Page {currentPage}</span>
             <button className="jobs-page-btn" type="button" onClick={goNext} disabled={!pagination?.hasNextPage}>
@@ -25,5 +25,3 @@ export function Pagination({ query, updateQuery, pagination }) {
         </div>
     );
 }
-
-//this component is responsible for rendering pagination controls (Prev/Next buttons and current page number) based on the pagination information received from the backend. It updates the page number in the query parameters when the user clicks on the Prev or Next buttons, which in turn triggers the useJobs hook to fetch the corresponding page of job listings.

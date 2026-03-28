@@ -17,6 +17,8 @@ const defaultJobsQuery = {
     location: '',
     skills: '',
     jobType: '',
+    salaryMin: '',
+    salaryMax: '',
 };
 
 export function JobsListPage() {
@@ -73,28 +75,38 @@ export function JobsListPage() {
     return (
         <section className="jobs-page">
             <div className="jobs-container">
-            <h1 className="jobs-title">Jobs</h1>
+                <header className="jobs-browse-header">
+                    <h1 className="jobs-title">Find Your Dream Job</h1>
+                    <p className="jobs-subtitle">Explore opportunities from top companies with smart filtering and quick apply.</p>
+                </header>
 
-            <JobFilters query={query} updateQuery={updateQuery} />
+                <div className="jobs-filter-card">
+                    <h2 className="jobs-filter-title">Search & Filter</h2>
+                    <JobFilters query={query} updateQuery={updateQuery} />
+                </div>
 
-            {loading && <Loader message="Loading jobs..." />}
-            {error && !loading && <ErrorState message={error} />}
+                {loading && <Loader message="Loading jobs..." />}
+                {error && !loading && <ErrorState message={error} />}
 
-            {!loading && !error && jobs.length === 0 && <EmptyState message="No jobs found for current filters." />}
+                {!loading && !error && jobs.length === 0 && <EmptyState message="No jobs found for current filters." />}
 
-            {!loading && !error && jobs.map((job) => (
-                <JobCard
-                    key={job._id || job.id}
-                    job={job}
-                    userRole={userRole}
-                    onApply={handleApply}
-                    onViewApplicants={handleViewApplicants}
-                />
-            ))}
+                {!loading && !error && (
+                    <div className="jobs-list">
+                        {jobs.map((job) => (
+                            <JobCard
+                                key={job._id || job.id}
+                                job={job}
+                                userRole={userRole}
+                                onApply={handleApply}
+                                onViewApplicants={handleViewApplicants}
+                            />
+                        ))}
+                    </div>
+                )}
 
-            {!loading && !error && jobs.length > 0 && (
-                <Pagination query={query} updateQuery={updateQuery} pagination={pagination} />
-            )}
+                {!loading && !error && jobs.length > 0 && (
+                    <Pagination query={query} updateQuery={updateQuery} pagination={pagination} />
+                )}
             </div>
         </section>
     );

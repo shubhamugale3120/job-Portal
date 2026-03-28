@@ -147,9 +147,13 @@ async function getApplicationsForJob(req, res) {
             .sort({ createdAt: -1 })
             .select('studentId jobId resumeUrl coverLetter status appliedAt')
             .lean(); // Use lean() for faster read-only queries
+        
+        // Filter out orphaned applications (where studentId is null/missing)
+        const validApplications = applications.filter(app => app.studentId && app.studentId.email);
+        
         return res.json({
             success: true,
-            data: applications
+            data: validApplications
         });
     } catch (err) {
         console.error('Error fetching applicants:', err);

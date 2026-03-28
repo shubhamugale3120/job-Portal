@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { applyToJob } from '../../services/applicationService';
 import { getJobById } from '../../services/jobService';
@@ -92,38 +92,78 @@ const JobDetailPage = () => {
 		return <ErrorState message="Job not found." />;
 	}
 
+	const skills = Array.isArray(job.skills) ? job.skills : [];
+	const postedOn = job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently';
+	const isClosed = String(job.status || '').toLowerCase() !== 'active';
+
 	return (
 		<section className="jobs-page">
 			<div className="jobs-container">
-				<article className="job-card">
-					<h1 className="job-card-title">{job.title}</h1>
-					<p className="job-card-meta">{job.company || 'Company not specified'}</p>
-					<p className="job-card-meta">{job.location || 'Location not specified'}</p>
-					<p className="job-card-skills">{Array.isArray(job.skills) ? job.skills.join(', ') : ''}</p>
-					<p className="job-card-type">{job.jobType || 'N/A'}</p>
-					<p className="job-card-meta">{job.description}</p>
-				</article>
+				<header className="jobs-browse-header">
+					<h1 className="jobs-title">Job Details</h1>
+					<p className="jobs-subtitle">Review role requirements and apply directly from this page.</p>
+				</header>
 
-				{user?.role === 'student' && (
-					<article className="job-card">
-						<h3 className="job-card-title">Apply to this Job</h3>
-						<form className="auth-form" onSubmit={handleApply}>
-							<div className="auth-field">
-								<label>Resume URL:</label>
-								<input
-									type="url"
-									value={resumeUrl}
-									onChange={(event) => setResumeUrl(event.target.value)}
-									placeholder="https://example.com/resume.pdf"
-									required
-								/>
+				<div className="job-detail-layout">
+					<article className="job-card job-detail-card">
+						<div className="job-header">
+							<h2 className="job-card-title">{job.title}</h2>
+							<span className={`job-status ${isClosed ? 'status-closed' : 'status-active'}`}>
+								{job.status || 'Active'}
+							</span>
+						</div>
+
+						<div className="job-meta">
+							<div className="meta-item">{job.location || 'Location not specified'}</div>
+							<div className="meta-item">{job.jobType || 'N/A'}</div>
+							<div className="meta-item">Posted {postedOn}</div>
+						</div>
+
+						<div className="job-detail-section">
+							<h3>About This Job</h3>
+							<p className="job-description">{job.description || 'No description provided.'}</p>
+						</div>
+
+						{skills.length > 0 && (
+							<div className="job-detail-section">
+								<h3>Required Skills</h3>
+								<div className="job-skills">
+									{skills.map((skill) => (
+										<span key={`${job._id}-${skill}`} className="skill-badge">{skill}</span>
+									))}
+								</div>
 							</div>
-							<button className="auth-submit" type="submit" disabled={submitting}>
-								{submitting ? 'Submitting...' : 'Apply'}
-							</button>
-						</form>
+						)}
+
+						<div className="job-detail-footer">
+							<div className="salary-badge">{job.salary || 'Salary not specified'}</div>
+							<Link className="btn-view" to="/jobs">Back to Jobs</Link>
+						</div>
 					</article>
-				)}
+
+					{user?.role === 'student' && (
+						<aside className="job-card job-apply-card">
+							<h3>Apply for This Position</h3>
+							<p>Add your resume link to submit your application.</p>
+							<form className="auth-form" onSubmit={handleApply}>
+								<div className="auth-field auth-field-stacked">
+									<label htmlFor="resumeUrl">Resume URL</label>
+									<input
+										id="resumeUrl"
+										type="url"
+										value={resumeUrl}
+										onChange={(event) => setResumeUrl(event.target.value)}
+										placeholder="https://example.com/resume.pdf"
+										required
+									/>
+								</div>
+								<button className="auth-submit" type="submit" disabled={submitting || isClosed}>
+									{submitting ? 'Submitting...' : isClosed ? 'Applications Closed' : 'Submit Application'}
+								</button>
+							</form>
+						</aside>
+					)}
+				</div>
 			</div>
 		</section>
 	);
